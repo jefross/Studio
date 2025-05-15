@@ -12,39 +12,23 @@ import { TOTAL_UNIQUE_GREEN_AGENTS } from '@/types';
 import { generateClue as generateAIClue } from '@/ai/flows/ai-clue-generator';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Loader2 } from 'lucide-react'; // Added Loader2
+import { RefreshCw, Loader2 } from 'lucide-react';
 
 export default function CodenamesDuetPage() {
-  const [gameState, setGameState] = useState<GameState | null>(null); // Initialize to null
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Initialize game state on the client side to prevent hydration mismatch
     setGameState(initializeGameState());
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, []);
 
   const resetGame = useCallback(() => {
     setGameState(initializeGameState());
   }, []);
 
-  // Guard clause for when gameState is not yet initialized
-  if (!gameState) {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 space-y-6">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground">Loading game...</p>
-      </div>
-    );
-  }
-
-  const wordCardsData: WordCardData[] = gameState.gridWords.map((word, index) => ({
-    word,
-    id: index,
-    revealedState: gameState.revealedStates[index],
-    keyCardEntry: gameState.keyCardSetup[index],
-  }));
-
   const checkWinOrLossCondition = useCallback(() => {
+    if (!gameState) return false;
+
     let newGameOver = gameState.gameOver;
     let newMessage = gameState.gameMessage;
 
@@ -60,24 +44,66 @@ export default function CodenamesDuetPage() {
       newMessage = 'Out of time! Not all agents were contacted. You lose.';
     }
     
-
     if (newGameOver && !gameState.gameOver) { 
       setGameState(prev => prev ? { ...prev, gameOver: true, gameMessage: newMessage, activeClue: null } : null);
     }
     return newGameOver;
-  }, [gameState.revealedStates, gameState.timerTokens, gameState.gameOver, gameState.gameMessage]);
+  }, [gameState]);
 
 
   useEffect(() => {
-    if (!gameState.isAIClueLoading && !gameState.gameOver) {
-        checkWinOrLossCondition();
+    if (!gameState || gameState.isAIClueLoading || gameState.gameOver) {
+        return;
     }
-  }, [gameState.revealedStates, gameState.timerTokens, gameState.isAIClueLoading, gameState.gameOver, checkWinOrLossCondition]);
+    checkWinOrLossCondition();
+  }, [gameState, checkWinOrLossCondition]);
 
+  const endPlayerTurn = useCallback((useTimerToken: boolean) => {
+    setGameState(prev => {
+      if (!prev) return null;
 
-  const handleAIClueGeneration = async () => {
+      const revealedGreenCountAfterGuess = prev.revealedStates.filter(s => s === 'green').length;
+      let gameShouldBeOver = prev.gameOver;
+      let finalMessage = prev.gameMessage;
+
+      if (revealedGreenCountAfterGuess === TOTAL_UNIQUE_GREEN_AGENTS) {
+        gameShouldBeOver = true;
+        finalMessage = 'All 15 agents contacted! You win!';
+      } else if (prev.timerTokens - (useTimerToken ? 1 : 0) <= 0 && !gameShouldBeOver) {
+        gameShouldBeOver = true;
+        finalMessage = 'Out of time! Not all agents were contacted. You lose.';
+      }
+
+      if (gameShouldBeOver) {
+        return {
+            ...prev,
+            gameOver: true,
+            gameMessage: finalMessage,
+            activeClue: null,
+            timerTokens: useTimerToken ? Math.max(0, prev.timerTokens - 1) : prev.timerTokens,
+        };
+      }
+
+      const newTimerTokens = useTimerToken ? Math.max(0, prev.timerTokens - 1) : prev.timerTokens;
+      const nextTurn = prev.currentTurn === 'human_clue' ? 'ai_clue' : 'human_clue';
+      
+      return {
+        ...prev,
+        currentTurn: nextTurn,
+        activeClue: null,
+        guessesMadeForClue: 0,
+        timerTokens: newTimerTokens,
+        gameMessage: `${nextTurn === 'ai_clue' ? "AI's" : "Your"} turn to give a clue.`,
+      };
+    });
+  }, [setGameState]);
+
+  const handleAIClueGeneration = useCallback(async () => {
+    if (!gameState) {
+      toast({ title: "Game Error", description: "Game state not available.", variant: "destructive" });
+      return;
+    }
     setGameState(prev => prev ? { ...prev, isAIClueLoading: true, gameMessage: "AI is thinking of a clue..." } : null);
-    if (!gameState) return; 
 
     try {
       const aiPerspective = getPerspective(gameState.keyCardSetup, 'ai');
@@ -122,60 +148,19 @@ export default function CodenamesDuetPage() {
       toast({ title: "AI Error", description: "Could not generate AI clue.", variant: "destructive" });
       setGameState(prev => prev ? { ...prev, isAIClueLoading: false, gameMessage: "Error getting AI clue. Try again or give a clue." } : null);
     }
-  };
+  }, [gameState, toast, setGameState]);
 
-  const handleHumanClueSubmit = (clue: Clue) => {
+  const handleHumanClueSubmit = useCallback((clue: Clue) => {
     setGameState(prev => prev ? {
       ...prev,
       activeClue: clue,
       gameMessage: `Your Clue: ${clue.word.toUpperCase()} for ${clue.count}. Click words for AI to 'guess'.`,
       guessesMadeForClue: 0,
     } : null);
-  };
+  }, [setGameState]);
 
-  const endPlayerTurn = useCallback((useTimerToken: boolean) => {
-    setGameState(prev => {
-      if (!prev) return null;
-
-      const revealedGreenCountAfterGuess = prev.revealedStates.filter(s => s === 'green').length;
-      let gameShouldBeOver = prev.gameOver;
-      let finalMessage = prev.gameMessage;
-
-      if (revealedGreenCountAfterGuess === TOTAL_UNIQUE_GREEN_AGENTS) {
-        gameShouldBeOver = true;
-        finalMessage = 'All 15 agents contacted! You win!';
-      } else if (prev.timerTokens - (useTimerToken ? 1 : 0) <= 0 && !gameShouldBeOver) {
-        gameShouldBeOver = true;
-        finalMessage = 'Out of time! Not all agents were contacted. You lose.';
-      }
-
-      if (gameShouldBeOver) {
-        return {
-            ...prev,
-            gameOver: true,
-            gameMessage: finalMessage,
-            activeClue: null,
-            timerTokens: useTimerToken ? Math.max(0, prev.timerTokens - 1) : prev.timerTokens,
-        };
-      }
-
-      const newTimerTokens = useTimerToken ? Math.max(0, prev.timerTokens - 1) : prev.timerTokens;
-      const nextTurn = prev.currentTurn === 'human_clue' ? 'ai_clue' : 'human_clue';
-      
-      return {
-        ...prev,
-        currentTurn: nextTurn,
-        activeClue: null,
-        guessesMadeForClue: 0,
-        timerTokens: newTimerTokens,
-        gameMessage: `${nextTurn === 'ai_clue' ? "AI's" : "Your"} turn to give a clue.`,
-      };
-    });
-  }, []);
-
-
-  const handleCardClick = (id: number) => {
-    if (gameState.gameOver || !gameState.activeClue || gameState.revealedStates[id] !== 'hidden' || gameState.isAIClueLoading) return;
+  const handleCardClick = useCallback((id: number) => {
+    if (!gameState || gameState.gameOver || !gameState.activeClue || gameState.revealedStates[id] !== 'hidden' || gameState.isAIClueLoading) return;
 
     const { currentTurn, activeClue, keyCardSetup, revealedStates: currentRevealedStates, guessesMadeForClue } = gameState;
     
@@ -245,8 +230,24 @@ export default function CodenamesDuetPage() {
     } else if (correctGuess) {
        toast({ title: "Correct!", description: `You can make another guess for this clue (${(activeClue.count + 1) - newGuessesMade} left).`});
     }
-  };
+  }, [gameState, toast, endPlayerTurn, setGameState]);
   
+  if (!gameState) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 space-y-6">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-muted-foreground">Loading game...</p>
+      </div>
+    );
+  }
+
+  const wordCardsData: WordCardData[] = gameState.gridWords.map((word, index) => ({
+    word,
+    id: index,
+    revealedState: gameState.revealedStates[index],
+    keyCardEntry: gameState.keyCardSetup[index],
+  }));
+
   const isPlayerGuessingPhase = !!gameState.activeClue && !gameState.gameOver && !gameState.isAIClueLoading;
   const isHumanPlayerGuessing = isPlayerGuessingPhase && gameState.currentTurn === 'ai_clue';
   const isAIPlayerGuessing = isPlayerGuessingPhase && gameState.currentTurn === 'human_clue';
