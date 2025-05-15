@@ -1,5 +1,5 @@
 
-import type { KeyCardSetup, CardType, RevealedState, KeyCardEntry } from '@/types';
+import type { KeyCardSetup, CardType, RevealedState, KeyCardEntry, GameState, PlayerTurn } from '@/types';
 import { WORD_LIST } from './words';
 import { TOTAL_WORDS_IN_GRID, INITIAL_TIMER_TOKENS, TOTAL_UNIQUE_GREEN_AGENTS } from '@/types';
 
@@ -19,18 +19,18 @@ export function selectRandomWords(count: number): string[] {
 }
 
 export function generateKeyCardSetup(): KeyCardSetup {
-  const setup: KeyCardEntry[] = [];
+  // Distribution ensures specific overlaps for Duet
   const typesDistribution: Array<{ human: CardType, ai: CardType, count: number }> = [
-    { human: 'GREEN', ai: 'GREEN', count: 3 },
-    { human: 'GREEN', ai: 'BYSTANDER', count: 5 },
-    { human: 'BYSTANDER', ai: 'GREEN', count: 5 },
-    { human: 'ASSASSIN', ai: 'ASSASSIN', count: 1 },
-    { human: 'ASSASSIN', ai: 'GREEN', count: 1 },
-    { human: 'GREEN', ai: 'ASSASSIN', count: 1 },
-    { human: 'ASSASSIN', ai: 'BYSTANDER', count: 1 },
-    { human: 'BYSTANDER', ai: 'ASSASSIN', count: 1 },
-    { human: 'BYSTANDER', ai: 'BYSTANDER', count: 7 },
-  ];
+    { human: 'GREEN', ai: 'GREEN', count: 3 },      // 3 Double Agents (Green for both)
+    { human: 'GREEN', ai: 'BYSTANDER', count: 5 },  // 5 Human's Agents (Bystander for AI)
+    { human: 'BYSTANDER', ai: 'GREEN', count: 5 },  // 5 AI's Agents (Bystander for Human)
+    { human: 'ASSASSIN', ai: 'ASSASSIN', count: 1 },// 1 Double Assassin
+    { human: 'GREEN', ai: 'ASSASSIN', count: 1 },   // 1 Human's Agent (Assassin for AI)
+    { human: 'ASSASSIN', ai: 'GREEN', count: 1 },   // 1 AI's Agent (Assassin for Human)
+    { human: 'ASSASSIN', ai: 'BYSTANDER', count: 1 },// 1 Human's Assassin (Bystander for AI)
+    { human: 'BYSTANDER', ai: 'ASSASSIN', count: 1 },// 1 AI's Assassin (Bystander for Human)
+    { human: 'BYSTANDER', ai: 'BYSTANDER', count: 7 }// 7 Innocent Bystanders
+  ]; // Total 25 cards
 
   const assignments: KeyCardEntry[] = [];
   typesDistribution.forEach(typeDist => {
@@ -42,17 +42,10 @@ export function generateKeyCardSetup(): KeyCardSetup {
   return shuffleArray(assignments);
 }
 
-export function initializeGameState() {
+export function initializeGameState(): GameState {
   const gridWords = selectRandomWords(TOTAL_WORDS_IN_GRID);
   const keyCardSetup = generateKeyCardSetup();
   const revealedStates: RevealedState[] = Array(TOTAL_WORDS_IN_GRID).fill('hidden');
-
-  let humanGreens = 0;
-  let aiGreens = 0;
-  keyCardSetup.forEach(entry => {
-    if(entry.human === 'GREEN') humanGreens++;
-    if(entry.ai === 'GREEN') aiGreens++;
-  });
   
   return {
     gridWords,
@@ -64,12 +57,14 @@ export function initializeGameState() {
     guessesMadeForClue: 0,
     gameOver: false,
     gameMessage: "AI's turn to give a clue.",
-    humanGreensLeft: humanGreens, // this is total P1 sees as green initially
-    aiGreensLeft: aiGreens, // this is total P2 sees as green initially
+    humanGreensLeft: countRemainingGreens(getPerspective(keyCardSetup, 'human'), revealedStates),
+    aiGreensLeft: countRemainingGreens(getPerspective(keyCardSetup, 'ai'), revealedStates),
     totalGreensFound: 0,
     isAIClueLoading: false,
     isAIGuessing: false,
     humanClueGuessingConcluded: false,
+    inSuddenDeath: false,
+    suddenDeathGuesser: null,
   };
 }
 
@@ -79,14 +74,14 @@ export function countRemainingGreens(
 ): number {
   let count = 0;
   for (let i = 0; i < TOTAL_WORDS_IN_GRID; i++) {
-    if (keyCardPerspective[i] === 'GREEN' && revealedStates[i] !== 'green') {
+    if (keyCardPerspective[i] === 'GREEN' && revealedStates[i] === 'hidden') { // Only count hidden greens
       count++;
     }
   }
   return count;
 }
 
+
 export function getPerspective(keyCardSetup: KeyCardSetup, player: 'human' | 'ai'): CardType[] {
     return keyCardSetup.map(kce => kce[player]);
 }
-
