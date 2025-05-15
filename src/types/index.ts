@@ -15,7 +15,7 @@ export interface WordCardData {
   keyCardEntry: KeyCardEntry;
 }
 
-export type RevealedState = 
+export type RevealedState =
   | 'hidden'
   | 'green' // Correctly guessed green agent
   | 'bystander_human_turn' // Bystander revealed by human during their guessing turn
@@ -43,6 +43,7 @@ export interface GameState {
   aiGreensLeft: number;
   totalGreensFound: number;
   isAIClueLoading: boolean;
+  isAIGuessing: boolean; // New state to track if AI is currently making guesses
 }
 
 export const TOTAL_WORDS_IN_GRID = 25;

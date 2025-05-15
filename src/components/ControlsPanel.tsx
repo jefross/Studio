@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Timer, Lightbulb, User, BotIcon, Info, CheckCircle, CircleDotDashed } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { Timer, Lightbulb, User, BotIcon, Info, CheckCircle, CircleDotDashed, Loader2 } from 'lucide-react'; // Added Loader2
 
 interface ControlsPanelProps {
   currentTurn: PlayerTurn;
@@ -17,10 +16,11 @@ interface ControlsPanelProps {
   aiGreensLeft: number;
   totalGreensFound: number;
   isAIClueLoading: boolean;
+  isAIGuessing: boolean; // New prop
   onHumanClueSubmit: (clue: Clue) => void;
   onGetAIClue: () => void;
   onEndTurn: () => void;
-  isGuessingPhase: boolean;
+  isPlayerTurnToGuess: boolean; // Renamed from isGuessingPhase for clarity
   guessesLeftForClue: number;
 }
 
@@ -33,10 +33,11 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   aiGreensLeft,
   totalGreensFound,
   isAIClueLoading,
+  isAIGuessing, // New prop
   onHumanClueSubmit,
   onGetAIClue,
   onEndTurn,
-  isGuessingPhase,
+  isPlayerTurnToGuess,
   guessesLeftForClue,
 }) => {
   const [humanClueWord, setHumanClueWord] = React.useState('');
@@ -51,16 +52,32 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
     }
   };
 
-  const whoseTurnText = currentTurn === 'human_clue'
-    ? (activeClue ? "AI is Guessing" : "Your Turn to Give Clue")
-    : (activeClue ? "Your Turn to Guess" : "AI's Turn to Give Clue");
-  const turnIcon = currentTurn === 'human_clue' ? <User className="mr-2 h-5 w-5" /> : <BotIcon className="mr-2 h-5 w-5" />;
+  const turnGiverText = currentTurn === 'human_clue' ? "Your Turn to Give Clue" : "AI's Turn to Give Clue";
+  const turnGuesserText = currentTurn === 'human_clue' ? "AI is Guessing" : "Your Turn to Guess";
+
+  let whoseTurnDisplay: string;
+  if (isAIGuessing) {
+    whoseTurnDisplay = "AI is Guessing Your Clue...";
+  } else if (isAIClueLoading) {
+    whoseTurnDisplay = "AI is Thinking of a Clue...";
+  } else if (activeClue) {
+    whoseTurnDisplay = turnGuesserText;
+  } else {
+    whoseTurnDisplay = turnGiverText;
+  }
+
+  const turnIcon = isAIGuessing || currentTurn === 'human_clue' ? <User className="mr-2 h-5 w-5" /> : <BotIcon className="mr-2 h-5 w-5" />;
+  
+  const disableHumanClueInput = isAIClueLoading || isAIGuessing || currentTurn !== 'human_clue' || !!activeClue;
+  const disableAICallButton = isAIClueLoading || isAIGuessing || currentTurn !== 'ai_clue' || !!activeClue;
+
 
   return (
     <Card className="w-full max-w-3xl mx-auto shadow-lg">
       <CardHeader className="pb-2">
         <CardTitle className="text-center text-xl flex items-center justify-center">
-          {turnIcon} {whoseTurnText}
+          {isAIGuessing || isAIClueLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : turnIcon} 
+          {whoseTurnDisplay}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -91,7 +108,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
         </div>
 
 
-        {currentTurn === 'human_clue' && !activeClue && !isAIClueLoading && (
+        {currentTurn === 'human_clue' && !activeClue && !isAIGuessing && (
           <form onSubmit={handleHumanSubmit} className="space-y-3 p-3 border rounded-md bg-background">
             <CardDescription className="text-center text-sm">Provide a one-word clue and a number.</CardDescription>
             <div className="space-y-1">
@@ -104,6 +121,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 placeholder="E.g., ANIMAL"
                 className="bg-card"
                 autoCapitalize="characters"
+                disabled={disableHumanClueInput}
               />
             </div>
             <div className="space-y-1">
@@ -127,16 +145,17 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 }}
                 placeholder="E.g., 3"
                 className="bg-card"
+                disabled={disableHumanClueInput}
               />
             </div>
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" disabled={disableHumanClueInput}>
               <Lightbulb className="mr-2 h-4 w-4" /> Submit Your Clue
             </Button>
           </form>
         )}
 
-        {currentTurn === 'ai_clue' && !activeClue && (
-          <Button onClick={onGetAIClue} disabled={isAIClueLoading} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+        {currentTurn === 'ai_clue' && !activeClue && !isAIGuessing && (
+          <Button onClick={onGetAIClue} disabled={disableAICallButton} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
             {isAIClueLoading ? (
               <> <CircleDotDashed className="mr-2 h-4 w-4 animate-spin" /> AI is Thinking...</>
             ) : (
@@ -145,16 +164,16 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
           </Button>
         )}
 
-        {activeClue && (
+        {activeClue && !isAIGuessing && ( // Don't show active clue if AI is guessing based on human's clue
           <Card className="bg-secondary p-4 rounded-md shadow-sm">
             <CardContent className="p-0 text-center">
               <p className="text-sm text-muted-foreground">
-                {currentTurn === 'ai_clue' ? 'AI gave the clue:' : 'Your clue is:'}
+                {currentTurn === 'ai_clue' ? 'AI gave the clue:' : 'Your clue for AI was:'}
               </p>
               <p className="text-2xl font-bold text-primary">
                 {activeClue.word.toUpperCase()} <span className="text-accent">{activeClue.count}</span>
               </p>
-              {isGuessingPhase && (
+              {isPlayerTurnToGuess && ( // Only show guesses left if it's human's turn to guess
                  <p className="text-xs text-muted-foreground mt-1">
                     Guesses available: {guessesLeftForClue} (up to {activeClue.count === 0 ? 1 : activeClue.count + 1} words)
                  </p>
@@ -163,7 +182,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
           </Card>
         )}
 
-        {isGuessingPhase && guessesLeftForClue > 0 && (
+        {isPlayerTurnToGuess && guessesLeftForClue > 0 && ( // Only show end turn button if human is guessing
             <Button onClick={onEndTurn} variant="outline" className="w-full">
              <CheckCircle className="mr-2 h-4 w-4" /> End Guessing Turn Voluntarily
             </Button>
