@@ -23,7 +23,7 @@ const GenerateGuessInputSchema = z.object({
     .describe("The words that are green (targets) for the AI player from its perspective and are not yet revealed. This is for the AI's general knowledge but not the primary target when guessing the human's clue."),
   aiAssassinWords: z
     .array(z.string())
-    .describe("The words that are assassins for the AI player from its perspective and are not yet revealed. The AI must avoid guessing these."),
+    .describe("The words that are assassins for the AI player from its perspective and are not yet revealed. The AI must be very cautious about guessing these."),
   revealedWords: z
     .array(z.string())
     .describe("A list of words that have already been revealed on the board."),
@@ -74,7 +74,7 @@ These words have ALREADY BEEN REVEALED and you CANNOT guess them:
   None
 {{/if}}
 
-From YOUR PERSPECTIVE (AI player), these are your ASSASSIN words that are NOT YET REVEALED. You MUST AVOID guessing these, as revealing one will end the game for your team:
+From YOUR PERSPECTIVE (AI player), these are your ASSASSIN words that are NOT YET REVEALED. Be extremely cautious with these words, as revealing one will end the game for your team.
 {{#if aiAssassinWords.length}}
   {{#each aiAssassinWords}}
     {{this}}{{#unless @last}}, {{/unless}}
@@ -82,6 +82,7 @@ From YOUR PERSPECTIVE (AI player), these are your ASSASSIN words that are NOT YE
 {{else}}
   None
 {{/if}}
+It's possible your human partner is trying to get you to guess a word that is one of their GREEN words but an ASSASSIN for you. This is a high-risk, high-reward situation. If their clue *very strongly* points to one of your assassin words, and you have few other good options, you may consider it as a very risky guess.
 
 For your general awareness, from YOUR PERSPECTIVE (AI player), these are your GREEN (target) words that are NOT YET REVEALED:
 {{#if aiGreenWords.length}}
@@ -91,16 +92,16 @@ For your general awareness, from YOUR PERSPECTIVE (AI player), these are your GR
 {{else}}
   None remaining
 {{/if}}
-While your main goal is to guess your partner's targets based on their clue, if a word strongly matches the clue AND is also one of your green words AND is not one of your assassins, it might be a good candidate. However, prioritize matching your partner's clue accurately.
+Your main goal is to guess your partner's targets based on their clue. Do not prioritize guessing your own green words unless they also strongly match the clue.
 
 Carefully analyze the clue ('{{clueWord}}' for {{clueNumber}}) and the available unrevealed words.
 Choose an ordered list of words from the gridWords that you want to guess.
 Your list should contain words that best match the clue your partner gave.
-ABSOLUTELY AVOID words that are ASSASSINS from YOUR perspective (listed above).
+If a word that strongly matches the clue is an ASSASSIN from YOUR perspective (listed above), you must carefully weigh the risk. Only select it if the clue is exceptionally strong for that word and other options are weak. Prioritize safer guesses if good alternatives exist.
 Do not guess any words from the 'revealedWords' list.
 The number of words in your 'guessedWords' list should be between 1 and (clueNumber + 1) if clueNumber > 0, or exactly 1 if clueNumber is 0. Be strategic about the number of words you list.
 
-Respond with the 'guessedWords' array and your 'reasoning'. If you think no words match the clue, or the risk of hitting one of YOUR assassins is too high given the options, provide an empty 'guessedWords' array and explain your reasoning for passing.
+Respond with the 'guessedWords' array and your 'reasoning'. If you think no words match the clue, or the risk of hitting one of YOUR assassins is too high given the options (even considering the possibility of it being a human's green word), provide an empty 'guessedWords' array and explain your reasoning for passing.
 `,
 });
 
