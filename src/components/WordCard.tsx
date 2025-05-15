@@ -3,7 +3,7 @@ import type React from 'react';
 import type { WordCardData, CardType } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { ShieldCheck, Skull, CircleHelp, Eye } from 'lucide-react'; // Added Eye for human key hint
+import { ShieldCheck, Skull, CircleHelp } from 'lucide-react';
 
 interface WordCardProps {
   cardData: WordCardData;
@@ -46,20 +46,6 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
 
   const showWordText = revealedState === 'hidden' || revealedState === 'bystander_human_turn' || revealedState === 'bystander_ai_turn';
 
-  const getHumanKeyHintColor = (type: CardType | undefined): string => {
-    if (!type) return 'border-transparent';
-    switch (type) {
-      case 'GREEN':
-        return 'border-green-500';
-      case 'ASSASSIN':
-        return 'border-red-700';
-      case 'BYSTANDER':
-        return 'border-gray-400';
-      default:
-        return 'border-transparent';
-    }
-  };
-
   return (
     <Card
       className={cn(
@@ -75,15 +61,17 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
       aria-pressed={revealedState !== 'hidden'}
       aria-disabled={!isClickable || revealedState !== 'hidden'}
     >
-      {/* Human Key Hint - always visible in a corner if card is hidden */}
+      {/* Human Key Hint - more prominent */}
       {revealedState === 'hidden' && keyCardEntry && (
         <div
           title={`Your key: ${keyCardEntry.human}`}
           className={cn(
-            "absolute top-1 left-1 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border-2 opacity-70",
-            getHumanKeyHintColor(keyCardEntry.human)
+            "absolute top-1 left-1 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2",
+            keyCardEntry.human === 'GREEN' && 'bg-green-500 border-green-700',
+            keyCardEntry.human === 'ASSASSIN' && 'bg-red-500 border-red-700',
+            keyCardEntry.human === 'BYSTANDER' && 'bg-gray-400 border-gray-500',
+            !keyCardEntry.human && 'border-transparent bg-transparent' // Fallback
           )}
-          style={{ backgroundColor: keyCardEntry.human === 'GREEN' ? 'rgba(34, 197, 94, 0.5)' : keyCardEntry.human === 'ASSASSIN' ? 'rgba(239, 68, 68, 0.5)' : 'rgba(156, 163, 175, 0.5)' }}
         />
       )}
 
