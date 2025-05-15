@@ -12,8 +12,8 @@ interface ControlsPanelProps {
   timerTokens: number;
   activeClue: Clue | null;
   gameMessage: string;
-  humanGreensLeft: number;
-  aiGreensLeft: number;
+  humanGreensLeft: number; // Number of human's agents AI needs to guess
+  aiGreensLeft: number;   // Number of AI's agents human needs to guess
   totalGreensFound: number;
   isAIClueLoading: boolean;
   isAIGuessing: boolean;
@@ -72,10 +72,10 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
     whoseTurnDisplay = "SUDDEN DEATH!";
     turnIcon = <AlertTriangle className="mr-2 h-5 w-5 text-destructive" />;
     if (suddenDeathGuesser === 'human') {
-        whoseTurnDisplay += " Your turn to REVEAL YOUR agent!";
+        whoseTurnDisplay += " Your turn to select for the AI partner!";
         turnIcon = <User className="mr-2 h-5 w-5" />;
     } else if (suddenDeathGuesser === 'ai') {
-        whoseTurnDisplay += " AI's turn to REVEAL ITS agent!";
+        whoseTurnDisplay += " AI's turn to select for its Human partner!";
         turnIcon = <BotIcon className="mr-2 h-5 w-5" />;
     } else {
         whoseTurnDisplay += " Evaluating..."; 
@@ -110,7 +110,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
         <div className="grid grid-cols-2 gap-4 text-center p-3 bg-muted/50 rounded-md">
           <div>
             <Label className="text-sm font-medium text-muted-foreground">Timer Tokens</Label>
-            <div className={`flex items-center justify-center text-2xl font-bold ${timerTokens <= 2 && timerTokens > 0 ? 'text-orange-500' : timerTokens === 0 && !inSuddenDeath ? 'text-destructive' : ''}`}>
+            <div className={`flex items-center justify-center text-2xl font-bold ${timerTokens <= 2 && timerTokens > 0 && !inSuddenDeath ? 'text-orange-500' : timerTokens === 0 && !inSuddenDeath ? 'text-destructive' : ''}`}>
               <Timer className="mr-2 h-6 w-6 text-primary" /> {timerTokens}
             </div>
           </div>
@@ -125,11 +125,11 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
         <div className="flex justify-around text-xs text-muted-foreground px-2 py-1 bg-muted/30 rounded-md">
             <div className="flex items-center">
                 <User className="mr-1 h-3 w-3" />
-                <span>Your Targets: {humanGreensLeft} left</span>
+                <span>Partner (Human) Needs: {humanGreensLeft} found</span>
             </div>
             <div className="flex items-center">
                 <BotIcon className="mr-1 h-3 w-3" />
-                <span>AI Targets: {aiGreensLeft} left</span>
+                <span>Partner (AI) Needs: {aiGreensLeft} found</span>
             </div>
         </div>
 
