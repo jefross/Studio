@@ -8,25 +8,29 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 93.3%; /* Light Gray #EEEEEE */
-    --foreground: 240 10% 3.9%; /* Default dark */
-    --card: 0 0% 100%; /* White for word cards */
-    --card-foreground: 240 10% 3.9%; /* Dark text on cards (using main foreground) */
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 120 57% 24%; /* Dark Green #1B5E20 */
-    --primary-foreground: 0 0% 98%; /* Light text on primary */
-    --secondary: 0 0% 90%; /* Slightly darker gray for secondary elements */
-    --secondary-foreground: 240 10% 3.9%;
-    --muted: 0 0% 85%; /* Muted gray */
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 174 65% 37%; /* Teal #26A69A */
-    --accent-foreground: 0 0% 98%; /* Light text on accent */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 80%; /* Adjusted for better visibility on light gray */
-    --input: 0 0% 89.8%;
-    --ring: 174 65% 37%; /* Accent color for rings */
+    --background: 120 40% 18%; /* Dark Forest Green (Cover Edges) */
+    --foreground: 80 60% 90%; /* Light Greenish-White (Cover Title Text) */
+    --card: 110 30% 28%; /* Medium-Dark Green (Unrevealed Cards) */
+    --card-foreground: 80 60% 90%; /* Light Text on Cards */
+    --popover: 110 30% 22%; /* Darker Green for Popovers */
+    --popover-foreground: 80 60% 90%;
+    --primary: 80 70% 50%; /* Bright Lime/Yellowish-Green (Cover Center, Green Agent Cards) */
+    --primary-foreground: 0 0% 10%; /* Black/Dark Gray (Text on Primary, Silhouettes) */
+    --secondary: 100 35% 35%; /* Mid-Green (Game Board Background, Secondary Elements) */
+    --secondary-foreground: 80 60% 90%;
+    --muted: 120 25% 22%; /* Dark Muted Green */
+    --muted-foreground: 100 20% 70%; /* Light Gray-Green Muted Text */
+    --accent: 90 60% 45%; /* Vibrant Mid-Green (Interactive Elements) */
+    --accent-foreground: 0 0% 10%; /* Dark Text on Accent */
+    --destructive: 0 70% 45%; /* Strong Red (Assassin) */
+    --destructive-foreground: 0 0% 98%; /* Light Text on Destructive */
+    --border: 110 25% 38%; /* Border Color */
+    --input: 110 30% 25%; /* Input Background */
+    --ring: 80 70% 55%; /* Ring Color (Focus) */
+
+    --bystander-background: 120 15% 40%; /* Neutral Muted Green/Gray for Bystander Cards */
+    --bystander-foreground: 80 60% 90%; /* Light Text for Bystander Cards */
+
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -34,52 +38,56 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
 
-    /* Sidebar specific theme vars - Retaining existing structure */
-    --sidebar-background: 0 0% 98%; /* Default light sidebar */
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 120 57% 24%; /* Using app primary */
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 174 65% 37%; /* Using app accent */
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 80%;
-    --sidebar-ring: 174 65% 37%;
+    /* Sidebar specific theme vars - Cover Theme */
+    --sidebar-background: 120 40% 15%; 
+    --sidebar-foreground: 80 60% 85%;
+    --sidebar-primary: 80 70% 50%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 90 60% 45%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 110 25% 30%;
+    --sidebar-ring: 80 70% 55%;
   }
 
   .dark {
-    --background: 240 10% 3.9%; /* Dark Dim Gray */
-    --foreground: 0 0% 98%; /* Light Gray */
-    --card: 240 8% 12%; /* Darker card for dark mode */
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 120 57% 30%; /* Dark Green slightly lighter for dark mode */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%; /* Darker Gray */
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 20%; /* Muted dark gray */
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 174 65% 45%; /* Teal slightly lighter for dark mode */
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 120 50% 12%; /* Even Darker Forest Green */
+    --foreground: 80 70% 92%; 
+    --card: 110 35% 22%;
+    --card-foreground: 80 70% 92%;
+    --popover: 110 35% 18%;
+    --popover-foreground: 80 70% 92%;
+    --primary: 80 75% 55%; /* Slightly More Vibrant Primary */
+    --primary-foreground: 0 0% 8%;
+    --secondary: 100 40% 30%;
+    --secondary-foreground: 80 70% 92%;
+    --muted: 120 30% 18%;
+    --muted-foreground: 100 25% 75%;
+    --accent: 90 65% 50%;
+    --accent-foreground: 0 0% 8%;
+    --destructive: 0 75% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 25%; /* Adjusted border for dark mode */
-    --input: 240 3.7% 15.9%;
-    --ring: 174 65% 45%; /* Accent color for rings in dark mode */
+    --border: 110 30% 32%;
+    --input: 110 35% 20%;
+    --ring: 80 75% 60%;
+    
+    --bystander-background: 120 10% 30%; /* Darker Muted Green/Gray for Bystander Cards */
+    --bystander-foreground: 80 70% 90%; /* Light Text for Bystander Cards */
+
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
 
-    /* Sidebar specific theme vars - Dark Mode */
-    --sidebar-background: 240 5.9% 10%; /* Dark sidebar */
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 120 57% 30%; /* Using app primary (dark) */
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 174 65% 45%; /* Using app accent (dark) */
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 25%;
-    --sidebar-ring: 174 65% 45%;
+    /* Sidebar specific theme vars - Cover Dark Mode */
+    --sidebar-background: 120 50% 10%;
+    --sidebar-foreground: 80 70% 90%;
+    --sidebar-primary: 80 75% 55%;
+    --sidebar-primary-foreground: 0 0% 8%;
+    --sidebar-accent: 90 65% 50%;
+    --sidebar-accent-foreground: 0 0% 8%;
+    --sidebar-border: 110 30% 25%;
+    --sidebar-ring: 80 75% 60%;
   }
 }
 
@@ -91,6 +99,15 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Component specific styles for bystander using CSS vars */
+.bg-bystander {
+  background-color: hsl(var(--bystander-background));
+}
+.text-bystander-foreground {
+  color: hsl(var(--bystander-foreground));
+}
+
 
 /* Confetti Animations */
 @keyframes fall {

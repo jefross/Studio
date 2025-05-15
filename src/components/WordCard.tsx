@@ -17,12 +17,12 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
   const getCardClasses = () => {
     switch (revealedState) {
       case 'green':
-        return 'bg-primary text-primary-foreground dark:bg-primary/80';
+        return 'bg-primary text-primary-foreground'; // Uses primary color for green agents
       case 'assassin':
-        return 'bg-destructive text-destructive-foreground dark:bg-destructive/80';
+        return 'bg-destructive text-destructive-foreground';
       case 'bystander_human_turn':
       case 'bystander_ai_turn':
-        return 'bg-yellow-400 dark:bg-yellow-600 text-black';
+        return 'bg-bystander text-bystander-foreground'; // Uses new CSS classes for bystanders
       case 'hidden':
       default:
         return 'bg-card hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors duration-150 text-card-foreground';
@@ -38,7 +38,7 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
         return <Skull className={cn(iconClass, "text-destructive-foreground")} />;
       case 'bystander_human_turn':
       case 'bystander_ai_turn':
-        return <CircleHelp className={cn(iconClass, "text-black")} />;
+        return <CircleHelp className={cn(iconClass, "text-bystander-foreground")} />; // Icon color matches bystander text
       default:
         return null;
     }
@@ -47,11 +47,13 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
   const renderHumanKeyHintIcon = () => {
     if (!keyCardEntry || revealedState !== 'hidden') return null;
     const iconSize = "w-3.5 h-3.5 sm:w-4 sm:h-4";
+    // Colors for hints might need slight adjustment based on new card background if contrast is an issue
+    // Using semantic colors where possible or direct HSL values if needed for specific contrast with new theme
     switch (keyCardEntry.human) {
       case 'GREEN':
-        return <CheckIcon className={cn(iconSize, "text-green-600 dark:text-green-500")} title="Your Green Agent" />;
+        return <CheckIcon className={cn(iconSize, "text-[hsl(var(--primary))] opacity-75")} title="Your Green Agent" />;
       case 'ASSASSIN':
-        return <Skull className={cn(iconSize, "text-red-600 dark:text-red-500")} title="Your Assassin" />;
+        return <Skull className={cn(iconSize, "text-[hsl(var(--destructive))] opacity-75")} title="Your Assassin" />;
       case 'BYSTANDER':
       default:
         return null;
@@ -63,9 +65,11 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
     const iconSize = "w-3.5 h-3.5 sm:w-4 sm:h-4";
     switch (keyCardEntry.ai) {
       case 'GREEN':
-        return <BotIcon className={cn(iconSize, "text-blue-600 dark:text-blue-500")} title="AI's Green Agent" />;
+        // AI Green might use accent or a different noticeable color.
+        return <BotIcon className={cn(iconSize, "text-[hsl(var(--accent))] opacity-75")} title="AI's Green Agent" />;
       case 'ASSASSIN':
-        return <AlertTriangleIcon className={cn(iconSize, "text-orange-600 dark:text-orange-500")} title="AI's Assassin" />;
+        // AI Assassin could use a warning color or a variation of destructive.
+        return <AlertTriangleIcon className={cn(iconSize, "text-orange-500 dark:text-orange-400 opacity-75")} title="AI's Assassin" />;
       case 'BYSTANDER':
       default:
         return null;
