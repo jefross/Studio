@@ -3,7 +3,7 @@ import type React from 'react';
 import type { WordCardData, CardType } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { ShieldCheck, Skull, CircleHelp } from 'lucide-react';
+import { ShieldCheck, Skull, CircleHelp, CheckIcon, AlertTriangleIcon } from 'lucide-react';
 
 interface WordCardProps {
   cardData: WordCardData;
@@ -29,7 +29,7 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
     }
   };
 
-  const renderIcon = () => {
+  const renderRevealedIcon = () => {
     const iconClass = "h-6 w-6 sm:h-8 sm:w-8";
     switch (revealedState) {
       case 'green':
@@ -41,6 +41,22 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
         return <CircleHelp className={cn(iconClass, "text-black")} />;
       default:
         return null;
+    }
+  };
+
+  const renderHumanKeyHintIcon = () => {
+    if (!keyCardEntry || revealedState !== 'hidden') return null;
+
+    const iconSize = "w-3.5 h-3.5 sm:w-4 sm:h-4";
+
+    switch (keyCardEntry.human) {
+      case 'GREEN':
+        return <CheckIcon className={cn(iconSize, "text-green-600 dark:text-green-500")} title="Your Green Agent" />;
+      case 'ASSASSIN':
+        return <Skull className={cn(iconSize, "text-red-600 dark:text-red-500")} title="Your Assassin" />;
+      case 'BYSTANDER':
+      default:
+        return null; // No icon for Bystanders
     }
   };
 
@@ -61,22 +77,18 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
       aria-pressed={revealedState !== 'hidden'}
       aria-disabled={!isClickable || revealedState !== 'hidden'}
     >
-      {/* Human Key Hint - more prominent */}
+      {/* Human Key Hint Icon */}
       {revealedState === 'hidden' && keyCardEntry && (
         <div
-          title={`Your key: ${keyCardEntry.human}`}
-          className={cn(
-            "absolute top-1 left-1 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2",
-            keyCardEntry.human === 'GREEN' && 'bg-green-500 border-green-700',
-            keyCardEntry.human === 'ASSASSIN' && 'bg-red-500 border-red-700',
-            keyCardEntry.human === 'BYSTANDER' && 'bg-gray-400 border-gray-500',
-            !keyCardEntry.human && 'border-transparent bg-transparent' // Fallback
-          )}
-        />
+          className="absolute top-1 left-1 sm:top-1.5 sm:left-1.5"
+          title={keyCardEntry.human === 'GREEN' ? "Your Agent" : keyCardEntry.human === 'ASSASSIN' ? "Your Assassin" : "Bystander"}
+        >
+          {renderHumanKeyHintIcon()}
+        </div>
       )}
 
       <CardContent className="p-1 flex flex-col items-center justify-center w-full h-full">
-        {revealedState !== 'hidden' && renderIcon()}
+        {revealedState !== 'hidden' && renderRevealedIcon()}
         {showWordText && (
           <span className={cn(
             "font-medium text-xs sm:text-sm md:text-base break-words leading-tight",
