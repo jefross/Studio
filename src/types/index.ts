@@ -43,9 +43,11 @@ export interface GameState {
   aiGreensLeft: number;
   totalGreensFound: number;
   isAIClueLoading: boolean;
-  isAIGuessing: boolean; // New state to track if AI is currently making guesses
+  isAIGuessing: boolean;
+  humanClueGuessingConcluded: boolean; // True if human's guessing for current AI clue is over (bystander, assassin, max guesses)
 }
 
 export const TOTAL_WORDS_IN_GRID = 25;
 export const INITIAL_TIMER_TOKENS = 9;
 export const TOTAL_UNIQUE_GREEN_AGENTS = 15;
+

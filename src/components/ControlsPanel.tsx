@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Timer, Lightbulb, User, BotIcon, Info, CheckCircle, CircleDotDashed, Loader2 } from 'lucide-react'; // Added Loader2
+import { Timer, Lightbulb, User, BotIcon, Info, CheckCircle, CircleDotDashed, Loader2, ShieldAlert } from 'lucide-react';
 
 interface ControlsPanelProps {
   currentTurn: PlayerTurn;
@@ -16,12 +16,14 @@ interface ControlsPanelProps {
   aiGreensLeft: number;
   totalGreensFound: number;
   isAIClueLoading: boolean;
-  isAIGuessing: boolean; // New prop
+  isAIGuessing: boolean;
   onHumanClueSubmit: (clue: Clue) => void;
   onGetAIClue: () => void;
-  onEndTurn: () => void;
-  isPlayerTurnToGuess: boolean; // Renamed from isGuessingPhase for clarity
+  onEndTurn: () => void; // Called when human clicks any end turn button
+  canHumanVoluntarilyEndGuessing: boolean; // Player can choose to end their guessing
+  mustHumanConfirmTurnEnd: boolean; // Player's guessing for the clue was ended by system (bystander etc.)
   guessesLeftForClue: number;
+  humanClueGuessingConcluded: boolean; // Direct state for button text
 }
 
 const ControlsPanel: React.FC<ControlsPanelProps> = ({
@@ -33,12 +35,14 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   aiGreensLeft,
   totalGreensFound,
   isAIClueLoading,
-  isAIGuessing, // New prop
+  isAIGuessing,
   onHumanClueSubmit,
   onGetAIClue,
   onEndTurn,
-  isPlayerTurnToGuess,
+  canHumanVoluntarilyEndGuessing,
+  mustHumanConfirmTurnEnd,
   guessesLeftForClue,
+  humanClueGuessingConcluded,
 }) => {
   const [humanClueWord, setHumanClueWord] = React.useState('');
   const [humanClueCount, setHumanClueCount] = React.useState<number | ''>(1);
@@ -53,16 +57,22 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   };
 
   const turnGiverText = currentTurn === 'human_clue' ? "Your Turn to Give Clue" : "AI's Turn to Give Clue";
-  const turnGuesserText = currentTurn === 'human_clue' ? "AI is Guessing" : "Your Turn to Guess";
+  let turnGuesserText = "Your Turn to Guess";
+  if (currentTurn === 'human_clue') { // AI is guessing
+    turnGuesserText = "AI is Guessing";
+  } else if (activeClue && humanClueGuessingConcluded) { // AI gave clue, human hit bystander/etc.
+    turnGuesserText = "Guessing Ended. Confirm to End Turn.";
+  }
+
 
   let whoseTurnDisplay: string;
   if (isAIGuessing) {
     whoseTurnDisplay = "AI is Guessing Your Clue...";
   } else if (isAIClueLoading) {
     whoseTurnDisplay = "AI is Thinking of a Clue...";
-  } else if (activeClue) {
+  } else if (activeClue && currentTurn === 'ai_clue') { // AI gave clue, human is to guess or has concluded guessing for this clue
     whoseTurnDisplay = turnGuesserText;
-  } else {
+  } else { // Clue giving phase
     whoseTurnDisplay = turnGiverText;
   }
 
@@ -164,7 +174,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
           </Button>
         )}
 
-        {activeClue && !isAIGuessing && ( // Don't show active clue if AI is guessing based on human's clue
+        {activeClue && !isAIGuessing && ( 
           <Card className="bg-secondary p-4 rounded-md shadow-sm">
             <CardContent className="p-0 text-center">
               <p className="text-sm text-muted-foreground">
@@ -173,18 +183,24 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
               <p className="text-2xl font-bold text-primary">
                 {activeClue.word.toUpperCase()} <span className="text-accent">{activeClue.count}</span>
               </p>
-              {isPlayerTurnToGuess && ( // Only show guesses left if it's human's turn to guess
+              {currentTurn === 'ai_clue' && !humanClueGuessingConcluded && guessesLeftForClue > 0 && (
                  <p className="text-xs text-muted-foreground mt-1">
-                    Guesses available: {guessesLeftForClue} (up to {activeClue.count === 0 ? 1 : activeClue.count + 1} words)
+                    Guesses available: {guessesLeftForClue === Infinity ? 'Unlimited (for clue 0)' : guessesLeftForClue}
+                 </p>
+              )}
+               {currentTurn === 'ai_clue' && humanClueGuessingConcluded && (
+                 <p className="text-xs text-destructive mt-1">
+                    Guessing ended for this clue. Confirm to end turn.
                  </p>
               )}
             </CardContent>
           </Card>
         )}
 
-        {isPlayerTurnToGuess && guessesLeftForClue > 0 && ( // Only show end turn button if human is guessing
-            <Button onClick={onEndTurn} variant="outline" className="w-full">
-             <CheckCircle className="mr-2 h-4 w-4" /> End Guessing Turn Voluntarily
+        {(canHumanVoluntarilyEndGuessing || mustHumanConfirmTurnEnd) && (
+            <Button onClick={onEndTurn} variant={mustHumanConfirmTurnEnd ? "destructive" : "outline"} className="w-full">
+             {mustHumanConfirmTurnEnd ? <ShieldAlert className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+             {mustHumanConfirmTurnEnd ? "End Turn (Token Used)" : "End Guessing Voluntarily"}
             </Button>
         )}
 

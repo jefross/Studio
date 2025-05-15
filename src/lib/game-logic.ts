@@ -68,6 +68,8 @@ export function initializeGameState() {
     aiGreensLeft: aiGreens, // this is total P2 sees as green initially
     totalGreensFound: 0,
     isAIClueLoading: false,
+    isAIGuessing: false,
+    humanClueGuessingConcluded: false,
   };
 }
 
@@ -87,3 +89,4 @@ export function countRemainingGreens(
 export function getPerspective(keyCardSetup: KeyCardSetup, player: 'human' | 'ai'): CardType[] {
     return keyCardSetup.map(kce => kce[player]);
 }
+
