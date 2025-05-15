@@ -7,20 +7,35 @@ import GameBoard from '@/components/GameBoard';
 import ControlsPanel from '@/components/ControlsPanel';
 import GameEndModal from '@/components/GameEndModal';
 import { initializeGameState, getPerspective, countRemainingGreens } from '@/lib/game-logic';
-import type { GameState, WordCardData, CardType, Clue, RevealedState } from '@/types';
-import { TOTAL_WORDS_IN_GRID, TOTAL_UNIQUE_GREEN_AGENTS, INITIAL_TIMER_TOKENS } from '@/types';
+import type { GameState, WordCardData, Clue } from '@/types';
+import { TOTAL_UNIQUE_GREEN_AGENTS } from '@/types';
 import { generateClue as generateAIClue } from '@/ai/flows/ai-clue-generator';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Loader2 } from 'lucide-react'; // Added Loader2
 
 export default function CodenamesDuetPage() {
-  const [gameState, setGameState] = useState<GameState>(initializeGameState());
+  const [gameState, setGameState] = useState<GameState | null>(null); // Initialize to null
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Initialize game state on the client side to prevent hydration mismatch
+    setGameState(initializeGameState());
+  }, []); // Empty dependency array ensures this runs once on mount
 
   const resetGame = useCallback(() => {
     setGameState(initializeGameState());
   }, []);
+
+  // Guard clause for when gameState is not yet initialized
+  if (!gameState) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 space-y-6">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-muted-foreground">Loading game...</p>
+      </div>
+    );
+  }
 
   const wordCardsData: WordCardData[] = gameState.gridWords.map((word, index) => ({
     word,
@@ -36,7 +51,7 @@ export default function CodenamesDuetPage() {
     const revealedGreenCount = gameState.revealedStates.filter(s => s === 'green').length;
 
     if (revealedGreenCount === TOTAL_UNIQUE_GREEN_AGENTS) {
-      if (!newGameOver) { // Only set win message if not already game over by loss
+      if (!newGameOver) {
         newGameOver = true;
         newMessage = 'All 15 agents contacted! You win!';
       }
@@ -45,19 +60,15 @@ export default function CodenamesDuetPage() {
       newMessage = 'Out of time! Not all agents were contacted. You lose.';
     }
     
-    // Assassin hit is handled immediately in handleCardClick and sets gameOver and gameMessage there.
-    // So, if an assassin was hit, newGameOver would already be true.
 
-    if (newGameOver && !gameState.gameOver) { // Update state only if game wasn't already over
-      setGameState(prev => ({ ...prev, gameOver: true, gameMessage: newMessage, activeClue: null }));
+    if (newGameOver && !gameState.gameOver) { 
+      setGameState(prev => prev ? { ...prev, gameOver: true, gameMessage: newMessage, activeClue: null } : null);
     }
     return newGameOver;
   }, [gameState.revealedStates, gameState.timerTokens, gameState.gameOver, gameState.gameMessage]);
 
 
   useEffect(() => {
-    // Check for win/loss conditions whenever relevant game state changes,
-    // but not if AI is thinking or if game is already over.
     if (!gameState.isAIClueLoading && !gameState.gameOver) {
         checkWinOrLossCondition();
     }
@@ -65,7 +76,9 @@ export default function CodenamesDuetPage() {
 
 
   const handleAIClueGeneration = async () => {
-    setGameState(prev => ({ ...prev, isAIClueLoading: true, gameMessage: "AI is thinking of a clue..." }));
+    setGameState(prev => prev ? { ...prev, isAIClueLoading: true, gameMessage: "AI is thinking of a clue..." } : null);
+    if (!gameState) return; 
+
     try {
       const aiPerspective = getPerspective(gameState.keyCardSetup, 'ai');
       const unrevealedAIGreens = gameState.gridWords.filter((word, i) => 
@@ -77,14 +90,14 @@ export default function CodenamesDuetPage() {
 
       if (unrevealedAIGreens.length === 0) {
         toast({ title: "AI Info", description: "AI has no more green words to give clues for." });
-        setGameState(prev => ({ 
+        setGameState(prev => prev ? { 
             ...prev, 
             isAIClueLoading: false, 
             activeClue: null, 
             gameMessage: "AI passes. Your turn to give a clue.",
-            currentTurn: 'human_clue', // Switch turn to human
+            currentTurn: 'human_clue',
             guessesMadeForClue: 0,
-        }));
+        } : null);
         return;
       }
 
@@ -95,35 +108,35 @@ export default function CodenamesDuetPage() {
         timerTokens: gameState.timerTokens,
       });
       
-      setGameState(prev => ({
+      setGameState(prev => prev ? {
         ...prev,
         activeClue: { word: aiClue.clueWord, count: aiClue.clueNumber },
         isAIClueLoading: false,
-        // Reasoning removed from gameMessage, kept in toast
         gameMessage: `AI's Clue: ${aiClue.clueWord.toUpperCase()} for ${aiClue.clueNumber}. Your turn to guess.`,
         guessesMadeForClue: 0,
-      }));
+      } : null);
       toast({ title: "AI Clue", description: `${aiClue.clueWord.toUpperCase()} - ${aiClue.clueNumber}. Reasoning: ${aiClue.reasoning || 'N/A'}` });
 
     } catch (error) {
       console.error("Error generating AI clue:", error);
       toast({ title: "AI Error", description: "Could not generate AI clue.", variant: "destructive" });
-      setGameState(prev => ({ ...prev, isAIClueLoading: false, gameMessage: "Error getting AI clue. Try again or give a clue." }));
+      setGameState(prev => prev ? { ...prev, isAIClueLoading: false, gameMessage: "Error getting AI clue. Try again or give a clue." } : null);
     }
   };
 
   const handleHumanClueSubmit = (clue: Clue) => {
-    setGameState(prev => ({
+    setGameState(prev => prev ? {
       ...prev,
       activeClue: clue,
       gameMessage: `Your Clue: ${clue.word.toUpperCase()} for ${clue.count}. Click words for AI to 'guess'.`,
       guessesMadeForClue: 0,
-    }));
+    } : null);
   };
 
   const endPlayerTurn = useCallback((useTimerToken: boolean) => {
     setGameState(prev => {
-      // Check win/loss before ending turn, as this might be the final action.
+      if (!prev) return null;
+
       const revealedGreenCountAfterGuess = prev.revealedStates.filter(s => s === 'green').length;
       let gameShouldBeOver = prev.gameOver;
       let finalMessage = prev.gameMessage;
@@ -132,7 +145,6 @@ export default function CodenamesDuetPage() {
         gameShouldBeOver = true;
         finalMessage = 'All 15 agents contacted! You win!';
       } else if (prev.timerTokens - (useTimerToken ? 1 : 0) <= 0 && !gameShouldBeOver) {
-         // if turn ends and tokens will be <=0 (and not already won/lost by assassin)
         gameShouldBeOver = true;
         finalMessage = 'Out of time! Not all agents were contacted. You lose.';
       }
@@ -142,7 +154,7 @@ export default function CodenamesDuetPage() {
             ...prev,
             gameOver: true,
             gameMessage: finalMessage,
-            activeClue: null, // Clear active clue on game over
+            activeClue: null,
             timerTokens: useTimerToken ? Math.max(0, prev.timerTokens - 1) : prev.timerTokens,
         };
       }
@@ -167,9 +179,7 @@ export default function CodenamesDuetPage() {
 
     const { currentTurn, activeClue, keyCardSetup, revealedStates: currentRevealedStates, guessesMadeForClue } = gameState;
     
-    const perspectiveKey = currentTurn === 'ai_clue' ? 'ai' : 'human'; // Whose card are we checking against based on WHO GAVE THE CLUE
-    // If AI gave clue (currentTurn === 'ai_clue'), human is guessing. We check against AI's keycard.
-    // If Human gave clue (currentTurn === 'human_clue'), AI is "guessing". We check against Human's keycard.
+    const perspectiveKey = currentTurn === 'ai_clue' ? 'ai' : 'human';
     const cardIdentityOnClueGiverSide = keyCardSetup[id][perspectiveKey];
     
     const newRevealedStates = [...currentRevealedStates];
@@ -185,7 +195,6 @@ export default function CodenamesDuetPage() {
       newGameMessage = `Assassin hit! ${currentTurn === 'ai_clue' ? 'You' : 'AI'} revealed an assassin. Game Over!`;
       newGameOver = true;
       turnShouldEnd = true;
-      // No token used for assassin hit, game ends immediately.
     } else if (cardIdentityOnClueGiverSide === 'GREEN') {
       newRevealedStates[id] = 'green';
       correctGuess = true;
@@ -193,45 +202,42 @@ export default function CodenamesDuetPage() {
       if (newGuessesMade >= activeClue.count +1 ) { 
         turnShouldEnd = true;
         newGameMessage += " Max guesses for this clue reached.";
-        // If turn ends due to max correct guesses, a token is NOT used.
       } else if (newGuessesMade === activeClue.count && activeClue.count > 0) {
         newGameMessage += ` One guess remaining for this clue or end turn.`;
-      } else if (activeClue.count === 0 && newGuessesMade === 1) { // Clue for 0, one guess allowed
+      } else if (activeClue.count === 0 && newGuessesMade === 1) {
         turnShouldEnd = true;
         newGameMessage += " Max guess for this clue (0+1) reached.";
       }
-    } else { // BYSTANDER
+    } else { 
       newRevealedStates[id] = currentTurn === 'ai_clue' ? 'bystander_human_turn' : 'bystander_ai_turn';
       newGameMessage = `Incorrect. ${gameState.gridWords[id].toUpperCase()} is a bystander. Turn ends.`;
       turnShouldEnd = true;
-      useTokenOnTurnEnd = true; // Token used for bystander hit.
+      useTokenOnTurnEnd = true;
     }
     
     const updatedTotalGreensFound = newRevealedStates.filter(s => s === 'green').length;
 
-    setGameState(prev => ({
+    setGameState(prev => prev ? {
       ...prev,
       revealedStates: newRevealedStates,
       gameOver: newGameOver,
-      gameMessage: newGameMessage, // Temporary message, might be overwritten by win/loss check
+      gameMessage: newGameMessage,
       guessesMadeForClue: newGuessesMade,
       totalGreensFound: updatedTotalGreensFound,
-    }));
+    } : null);
 
-    if (newGameOver) { // Assassin hit
-        // Game over state is set, message is set. checkWinOrLossCondition will confirm.
+    if (newGameOver) {
         return; 
     }
     
-    // Check for win AFTER updating state with the new green card
     if (correctGuess && updatedTotalGreensFound === TOTAL_UNIQUE_GREEN_AGENTS) {
-        setGameState(prev => ({
+        setGameState(prev => prev ? {
             ...prev,
             gameOver: true,
             gameMessage: 'All 15 agents contacted! You win!',
-            activeClue: null, // Clear active clue on win
-        }));
-        return; // Game ends, no further turn logic.
+            activeClue: null,
+        } : null);
+        return; 
     }
 
     if (turnShouldEnd) {
@@ -267,7 +273,7 @@ export default function CodenamesDuetPage() {
         isAIClueLoading={gameState.isAIClueLoading}
         onHumanClueSubmit={handleHumanClueSubmit}
         onGetAIClue={handleAIClueGeneration}
-        onEndTurn={() => endPlayerTurn(true)} // End turn voluntarily uses a token
+        onEndTurn={() => endPlayerTurn(true)} 
         isGuessingPhase={isPlayerGuessingPhase}
         guessesLeftForClue={guessesLeftForThisClue}
       />
@@ -291,4 +297,3 @@ export default function CodenamesDuetPage() {
     </div>
   );
 }
-
