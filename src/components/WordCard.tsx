@@ -3,7 +3,7 @@ import type React from 'react';
 import type { WordCardData, CardType } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { ShieldCheck, Skull, CircleHelp, CheckIcon, AlertTriangleIcon, BotIcon } from 'lucide-react';
+import { ShieldCheck, Skull, CircleHelp, CheckIcon } from 'lucide-react';
 
 interface WordCardProps {
   cardData: WordCardData;
@@ -17,12 +17,12 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
   const getCardClasses = () => {
     switch (revealedState) {
       case 'green':
-        return 'bg-primary text-primary-foreground'; // Uses primary color for green agents
+        return 'bg-primary text-primary-foreground'; 
       case 'assassin':
         return 'bg-destructive text-destructive-foreground';
       case 'bystander_human_turn':
       case 'bystander_ai_turn':
-        return 'bg-bystander text-bystander-foreground'; // Uses new CSS classes for bystanders
+        return 'bg-bystander text-bystander-foreground'; 
       case 'hidden':
       default:
         return 'bg-card hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors duration-150 text-card-foreground';
@@ -38,7 +38,7 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
         return <Skull className={cn(iconClass, "text-destructive-foreground")} />;
       case 'bystander_human_turn':
       case 'bystander_ai_turn':
-        return <CircleHelp className={cn(iconClass, "text-bystander-foreground")} />; // Icon color matches bystander text
+        return <CircleHelp className={cn(iconClass, "text-bystander-foreground")} />;
       default:
         return null;
     }
@@ -47,8 +47,6 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
   const renderHumanKeyHintIcon = () => {
     if (!keyCardEntry || revealedState !== 'hidden') return null;
     const iconSize = "w-3.5 h-3.5 sm:w-4 sm:h-4";
-    // Colors for hints might need slight adjustment based on new card background if contrast is an issue
-    // Using semantic colors where possible or direct HSL values if needed for specific contrast with new theme
     switch (keyCardEntry.human) {
       case 'GREEN':
         return <CheckIcon className={cn(iconSize, "text-[hsl(var(--primary))] opacity-75")} title="Your Green Agent" />;
@@ -60,21 +58,7 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
     }
   };
 
-  const renderAIKeyHintIcon = () => {
-    if (!keyCardEntry || revealedState !== 'hidden') return null;
-    const iconSize = "w-3.5 h-3.5 sm:w-4 sm:h-4";
-    switch (keyCardEntry.ai) {
-      case 'GREEN':
-        // AI Green might use accent or a different noticeable color.
-        return <BotIcon className={cn(iconSize, "text-[hsl(var(--accent))] opacity-75")} title="AI's Green Agent" />;
-      case 'ASSASSIN':
-        // AI Assassin could use a warning color or a variation of destructive.
-        return <AlertTriangleIcon className={cn(iconSize, "text-orange-500 dark:text-orange-400 opacity-75")} title="AI's Assassin" />;
-      case 'BYSTANDER':
-      default:
-        return null;
-    }
-  };
+  // AI Key Hint Icon rendering is removed as per user request
 
   const showWordText = revealedState === 'hidden' || revealedState === 'bystander_human_turn' || revealedState === 'bystander_ai_turn';
 
@@ -103,15 +87,7 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
         </div>
       )}
 
-      {/* AI Key Hint Icon (Top-Right) */}
-      {revealedState === 'hidden' && keyCardEntry && (
-        <div
-          className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5"
-          title={keyCardEntry.ai === 'GREEN' ? "AI's Agent" : keyCardEntry.ai === 'ASSASSIN' ? "AI's Assassin" : "Bystander (for AI)"}
-        >
-          {renderAIKeyHintIcon()}
-        </div>
-      )}
+      {/* AI Key Hint Icon (Top-Right) - REMOVED */}
 
       <CardContent className="p-1 flex flex-col items-center justify-center w-full h-full">
         {revealedState !== 'hidden' && renderRevealedIcon()}
@@ -128,3 +104,4 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
 };
 
 export default WordCard;
+
