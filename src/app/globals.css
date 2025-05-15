@@ -8,98 +8,92 @@ body {
 
 @layer base {
   :root {
-    --background: 120 40% 18%; /* Dark Forest Green (Cover Edges) */
-    --foreground: 80 60% 90%; /* Light Greenish-White (Cover Title Text) */
+    /* Standard ShadCN Variables - General UI */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --secondary: 210 40% 96.1%; /* Game board background and other secondary elements */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
 
-    /* Updated for high-contrast cards */
+    /* Game Cover Theme Variables - CARD SPECIFIC */
     --card: 48 33% 92%; /* Light Parchment/Cream for unrevealed cards */
     --card-foreground: 45 15% 25%; /* Dark Brownish Gray for text on unrevealed cards */
-    
-    --popover: 110 30% 22%; /* Darker Green for Popovers */
-    --popover-foreground: 80 60% 90%;
     --primary: 80 70% 50%; /* Bright Lime/Yellowish-Green (Cover Center, Green Agent Cards) */
     --primary-foreground: 0 0% 10%; /* Black/Dark Gray (Text on Primary, Silhouettes) */
-    --secondary: 100 35% 35%; /* Mid-Green (Game Board Background, Secondary Elements) */
-    --secondary-foreground: 80 60% 90%;
-    --muted: 120 25% 22%; /* Dark Muted Green */
-    --muted-foreground: 100 20% 70%; /* Light Gray-Green Muted Text */
-    --accent: 90 60% 45%; /* Vibrant Mid-Green (Interactive Elements) */
-    --accent-foreground: 0 0% 10%; /* Dark Text on Accent */
     --destructive: 0 70% 45%; /* Strong Red (Assassin) */
     --destructive-foreground: 0 0% 98%; /* Light Text on Destructive */
-    
-    /* Updated border for more definition */
-    --border: 110 25% 30%; /* Darker Greenish Border */
-    
-    --input: 110 30% 25%; /* Input Background */
-    --ring: 80 70% 55%; /* Ring Color (Focus) */
-
+    --accent: 90 60% 45%; /* Vibrant Mid-Green (Interactive Elements, AI Green Hint, Card Hover) */
+    --accent-foreground: 0 0% 10%; /* Dark Text on Accent */
     --bystander-background: 120 15% 40%; /* Neutral Muted Green/Gray for Bystander Cards */
     --bystander-foreground: 80 60% 90%; /* Light Text for Bystander Cards */
 
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-
-    /* Sidebar specific theme vars - Cover Theme */
-    --sidebar-background: 120 40% 15%; 
-    --sidebar-foreground: 80 60% 85%;
-    --sidebar-primary: 80 70% 50%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 90 60% 45%;
-    --sidebar-accent-foreground: 0 0% 10%;
-    --sidebar-border: 110 25% 30%;
-    --sidebar-ring: 80 70% 55%;
-  }
-
-  .dark {
-    --background: 120 50% 12%; /* Even Darker Forest Green */
-    --foreground: 80 70% 92%; 
-
-    /* Dark mode cards remain dark with light text for consistency */
-    --card: 110 35% 22%; /* Dark Green for unrevealed cards in dark mode */
-    --card-foreground: 80 70% 92%; /* Light text on dark cards */
-
-    --popover: 110 35% 18%;
-    --popover-foreground: 80 70% 92%;
-    --primary: 80 75% 55%; /* Slightly More Vibrant Primary */
-    --primary-foreground: 0 0% 8%;
-    --secondary: 100 40% 30%;
-    --secondary-foreground: 80 70% 92%;
-    --muted: 120 30% 18%;
-    --muted-foreground: 100 25% 75%;
-    --accent: 90 65% 50%;
-    --accent-foreground: 0 0% 8%;
-    --destructive: 0 75% 50%;
-    --destructive-foreground: 0 0% 98%;
-
-    /* Updated border for dark mode */
-    --border: 110 30% 25%; /* Slightly darker border for dark mode definition */
-    
-    --input: 110 35% 20%;
-    --ring: 80 75% 60%;
-    
-    --bystander-background: 120 10% 30%; /* Darker Muted Green/Gray for Bystander Cards */
-    --bystander-foreground: 80 70% 90%; /* Light Text for Bystander Cards */
-
+    /* Standard Chart Variables */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
 
-    /* Sidebar specific theme vars - Cover Dark Mode */
-    --sidebar-background: 120 50% 10%;
-    --sidebar-foreground: 80 70% 90%;
-    --sidebar-primary: 80 75% 55%;
-    --sidebar-primary-foreground: 0 0% 8%;
-    --sidebar-accent: 90 65% 50%;
-    --sidebar-accent-foreground: 0 0% 8%;
-    --sidebar-border: 110 30% 25%;
-    --sidebar-ring: 80 75% 60%;
+    /* Sidebar specific theme vars - derived from main theme */
+    --sidebar-background: hsl(var(--background)); 
+    --sidebar-foreground: hsl(var(--foreground));
+    --sidebar-primary: hsl(var(--primary)); /* Will use card-themed primary for consistency if sidebar has primary elements */
+    --sidebar-primary-foreground: hsl(var(--primary-foreground));
+    --sidebar-accent: hsl(var(--accent)); /* Card-themed accent */
+    --sidebar-accent-foreground: hsl(var(--accent-foreground));
+    --sidebar-border: hsl(var(--border));
+    --sidebar-ring: hsl(var(--ring));
+  }
+
+  .dark {
+    /* Standard ShadCN Dark Variables - General UI */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --secondary: 217.2 32.6% 17.5%; /* Game board background and other secondary elements */
+    --secondary-foreground: 210 40% 98%;
+    --ring: 212.7 26.8% 83.9%;
+
+    /* Game Cover Theme Variables - CARD SPECIFIC (Dark Mode) */
+    --card: 110 35% 22%; /* Dark Green for unrevealed cards in dark mode */
+    --card-foreground: 80 70% 92%; /* Light text on dark cards */
+    --primary: 80 75% 55%; /* Slightly More Vibrant Primary for Green Agent cards */
+    --primary-foreground: 0 0% 8%; /* Dark text for Green Agent cards */
+    --destructive: 0 75% 50%; /* Strong Red for Assassin cards */
+    --destructive-foreground: 0 0% 98%; /* Light text for Assassin cards */
+    --accent: 90 65% 50%; /* Vibrant Mid-Green for AI Green Hint, Card Hover */
+    --accent-foreground: 0 0% 8%; /* Dark text for Accent */
+    --bystander-background: 120 10% 30%; /* Darker Muted Green/Gray for Bystander Cards */
+    --bystander-foreground: 80 70% 90%; /* Light Text for Bystander Cards */
+    
+    /* Standard Dark Chart Variables */
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
+    /* Sidebar specific theme vars - derived from main dark theme */
+    --sidebar-background: hsl(var(--background));
+    --sidebar-foreground: hsl(var(--foreground));
+    --sidebar-primary: hsl(var(--primary));
+    --sidebar-primary-foreground: hsl(var(--primary-foreground));
+    --sidebar-accent: hsl(var(--accent));
+    --sidebar-accent-foreground: hsl(var(--accent-foreground));
+    --sidebar-border: hsl(var(--border));
+    --sidebar-ring: hsl(var(--ring));
   }
 }
 
