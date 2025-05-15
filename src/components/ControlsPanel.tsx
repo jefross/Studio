@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Timer, Lightbulb, User, BotIcon, Info, CheckCircle, CircleDotDashed, Loader2, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Timer, Lightbulb, User, BotIcon, Info, CheckCircle, CircleDotDashed, Loader2, ShieldAlert, AlertTriangle, XCircle } from 'lucide-react';
 
 interface ControlsPanelProps {
   currentTurn: PlayerTurn;
@@ -26,7 +26,7 @@ interface ControlsPanelProps {
   humanClueGuessingConcluded: boolean;
   inSuddenDeath: boolean;
   suddenDeathGuesser: GuesserType | null;
-  gameOver: boolean; // Added gameOver prop
+  gameOver: boolean; 
 }
 
 const ControlsPanel: React.FC<ControlsPanelProps> = ({
@@ -48,7 +48,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   humanClueGuessingConcluded,
   inSuddenDeath,
   suddenDeathGuesser,
-  gameOver, // Destructure gameOver
+  gameOver, 
 }) => {
   const [humanClueWord, setHumanClueWord] = React.useState('');
   const [humanClueCount, setHumanClueCount] = React.useState<number | ''>(1);
@@ -72,13 +72,13 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
     whoseTurnDisplay = "SUDDEN DEATH!";
     turnIcon = <AlertTriangle className="mr-2 h-5 w-5 text-destructive" />;
     if (suddenDeathGuesser === 'human') {
-        whoseTurnDisplay += " Your Guess!";
+        whoseTurnDisplay += " Your turn to pick YOUR agent!";
         turnIcon = <User className="mr-2 h-5 w-5" />;
     } else if (suddenDeathGuesser === 'ai') {
-        whoseTurnDisplay += " AI's Guess!";
+        whoseTurnDisplay += " AI's turn to pick ITS agent!";
         turnIcon = <BotIcon className="mr-2 h-5 w-5" />;
     } else {
-        whoseTurnDisplay += " Evaluating...";
+        whoseTurnDisplay += " Evaluating..."; // E.g., if no one can guess
     }
   } else if (isAIGuessing) {
     whoseTurnDisplay = "AI is Guessing Your Clue...";
@@ -87,7 +87,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
     whoseTurnDisplay = "AI is Thinking of a Clue...";
     turnIcon = <Loader2 className="mr-2 h-5 w-5 animate-spin" />;
   } else if (activeClue && currentTurn === 'ai_clue') {
-    whoseTurnDisplay = humanClueGuessingConcluded ? "Guessing Ended. Confirm to End Turn." : "Your Turn to Guess";
+    whoseTurnDisplay = humanClueGuessingConcluded ? "Guessing Ended. Confirm to End Turn." : "Your Turn to Guess AI's Clue";
     turnIcon = <User className="mr-2 h-5 w-5" />;
   } else {
     whoseTurnDisplay = currentTurn === 'human_clue' ? "Your Turn to Give Clue" : "AI's Turn to Give Clue";
@@ -110,7 +110,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
         <div className="grid grid-cols-2 gap-4 text-center p-3 bg-muted/50 rounded-md">
           <div>
             <Label className="text-sm font-medium text-muted-foreground">Timer Tokens</Label>
-            <div className={`flex items-center justify-center text-2xl font-bold ${timerTokens <= 2 && timerTokens > 0 ? 'text-orange-500' : timerTokens === 0 ? 'text-destructive' : ''}`}>
+            <div className={`flex items-center justify-center text-2xl font-bold ${timerTokens <= 2 && timerTokens > 0 ? 'text-orange-500' : timerTokens === 0 && !inSuddenDeath ? 'text-destructive' : ''}`}>
               <Timer className="mr-2 h-6 w-6 text-primary" /> {timerTokens}
             </div>
           </div>
