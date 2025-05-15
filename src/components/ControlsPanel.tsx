@@ -72,22 +72,22 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
     whoseTurnDisplay = "SUDDEN DEATH!";
     turnIcon = <AlertTriangle className="mr-2 h-5 w-5 text-destructive" />;
     if (suddenDeathGuesser === 'human') {
-        whoseTurnDisplay += " Your turn to pick YOUR agent!";
+        whoseTurnDisplay += " Your turn to REVEAL YOUR agent!";
         turnIcon = <User className="mr-2 h-5 w-5" />;
     } else if (suddenDeathGuesser === 'ai') {
-        whoseTurnDisplay += " AI's turn to pick ITS agent!";
+        whoseTurnDisplay += " AI's turn to REVEAL ITS agent!";
         turnIcon = <BotIcon className="mr-2 h-5 w-5" />;
     } else {
-        whoseTurnDisplay += " Evaluating..."; // E.g., if no one can guess
+        whoseTurnDisplay += " Evaluating..."; 
     }
   } else if (isAIGuessing) {
-    whoseTurnDisplay = "AI is Guessing Your Clue...";
+    whoseTurnDisplay = "AI is Making Selections...";
     turnIcon = <Loader2 className="mr-2 h-5 w-5 animate-spin" />;
   } else if (isAIClueLoading) {
     whoseTurnDisplay = "AI is Thinking of a Clue...";
     turnIcon = <Loader2 className="mr-2 h-5 w-5 animate-spin" />;
   } else if (activeClue && currentTurn === 'ai_clue') {
-    whoseTurnDisplay = humanClueGuessingConcluded ? "Guessing Ended. Confirm to End Turn." : "Your Turn to Guess AI's Clue";
+    whoseTurnDisplay = humanClueGuessingConcluded ? "Selections Ended. Confirm to End Turn." : "Your Turn to Make Selections for AI's Clue";
     turnIcon = <User className="mr-2 h-5 w-5" />;
   } else {
     whoseTurnDisplay = currentTurn === 'human_clue' ? "Your Turn to Give Clue" : "AI's Turn to Give Clue";
@@ -201,12 +201,12 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
               </p>
               {currentTurn === 'ai_clue' && !humanClueGuessingConcluded && guessesLeftForClue > 0 && (
                  <p className="text-xs text-muted-foreground mt-1">
-                    Guesses available: {guessesLeftForClue === Infinity ? 'Unlimited (for clue 0)' : guessesLeftForClue}
+                    Selections available: {guessesLeftForClue === Infinity ? 'Unlimited (for clue 0)' : guessesLeftForClue}
                  </p>
               )}
                {currentTurn === 'ai_clue' && humanClueGuessingConcluded && (
                  <p className="text-xs text-destructive mt-1">
-                    Guessing ended for this clue. Confirm to end turn.
+                    Selections ended for this clue. Confirm to end turn.
                  </p>
               )}
             </CardContent>
@@ -216,7 +216,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
         {!gameOver && !inSuddenDeath && (canHumanVoluntarilyEndGuessing || mustHumanConfirmTurnEnd) && (
             <Button onClick={onEndTurn} variant={mustHumanConfirmTurnEnd ? "destructive" : "outline"} className="w-full">
              {mustHumanConfirmTurnEnd ? <ShieldAlert className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-             {mustHumanConfirmTurnEnd ? "End Turn (Token Used)" : "End Guessing Voluntarily"}
+             {mustHumanConfirmTurnEnd ? "End Turn (Token Used)" : "End Selections Voluntarily"}
             </Button>
         )}
 
