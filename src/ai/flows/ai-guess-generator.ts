@@ -39,7 +39,7 @@ const GenerateGuessOutputSchema = z.object({
   reasoning: z
     .string()
     .optional()
-    .describe('The AI reasoning behind the chosen guesses or decision to pass. Explain why if passing.'),
+    .describe('The AI reasoning behind the chosen guesses or decision to pass. Explain why if passing, especially if no words match the clue or if the risk of hitting an AI assassin is too high.'),
 });
 export type GenerateGuessOutput = z.infer<typeof GenerateGuessOutputSchema>;
 
@@ -51,11 +51,14 @@ export async function generateAiGuess(
 
 const generateGuessPrompt = ai.definePrompt({
   name: 'generateAiGuessPrompt',
-  input: {schema: GenerateGuessInputSchema},
+  input: {schema: z.object({ // The prompt input now includes the boolean flag
+    ...GenerateGuessInputSchema.shape,
+    isSuddenDeathScenario: z.boolean(),
+  })},
   output: {schema: GenerateGuessOutputSchema},
   prompt: `You are an AI playing Codenames Duet.
 
-{{#if (eq clueWord "FIND_GREEN_AGENT_SUDDEN_DEATH")}}
+{{#if isSuddenDeathScenario}}
 You are in a SUDDEN DEATH round. You MUST select exactly ONE word from your 'aiGreenWords' list to guess. If none of your green words are left, or if all your remaining green words are too risky (e.g., also your assassin), you may pass by providing an empty 'guessedWords' array. Hitting one of your 'aiAssassinWords' or a bystander in sudden death results in an immediate loss for your team. Choose very carefully.
 {{else}}
 Your human partner has given you a clue.
@@ -81,10 +84,10 @@ These words have ALREADY BEEN REVEALED and you CANNOT guess them:
 {{/if}}
 
 From YOUR PERSPECTIVE (AI player), these are your ASSASSIN words that are NOT YET REVEALED.
-{{#if (eq clueWord "FIND_GREEN_AGENT_SUDDEN_DEATH")}}
+{{#if isSuddenDeathScenario}}
 In Sudden Death, guessing one of these means your team LOSES. Be extremely careful.
 {{else}}
-Be extremely cautious with these words, as revealing one will end the game for your team if it's an assassin for your partner (who gave the clue).
+Be extremely cautious with these words. It's possible your human partner is trying to get you to guess a word that is one of their GREEN words but an ASSASSIN for you. This is a high-risk, high-reward situation. If their clue *very strongly* points to one of your assassin words, and you have few other good options, you may consider it as a very risky guess.
 {{/if}}
 {{#if aiAssassinWords.length}}
   {{#each aiAssassinWords}}
@@ -93,7 +96,6 @@ Be extremely cautious with these words, as revealing one will end the game for y
 {{else}}
   None
 {{/if}}
-It's possible your human partner is trying to get you to guess a word that is one of their GREEN words but an ASSASSIN for you. This is a high-risk, high-reward situation. If their clue *very strongly* points to one of your assassin words, and you have few other good options, you may consider it as a very risky guess. This applies mainly to normal play.
 
 For your general awareness, from YOUR PERSPECTIVE (AI player), these are your GREEN (target) words that are NOT YET REVEALED:
 {{#if aiGreenWords.length}}
@@ -104,7 +106,7 @@ For your general awareness, from YOUR PERSPECTIVE (AI player), these are your GR
   None remaining
 {{/if}}
 
-{{#if (eq clueWord "FIND_GREEN_AGENT_SUDDEN_DEATH")}}
+{{#if isSuddenDeathScenario}}
 In Sudden Death: Select ONE word from 'aiGreenWords' that is not revealed. If multiple options, pick the safest one (not one of your assassins if possible). If no safe green words, or no green words left, pass with empty 'guessedWords'.
 {{else}}
 Your main goal is to guess your partner's targets based on their clue. Do not prioritize guessing your own green words unless they also strongly match the clue.
@@ -123,26 +125,34 @@ Respond with the 'guessedWords' array and your 'reasoning'. If you think no word
 const generateAiGuessFlow = ai.defineFlow(
   {
     name: 'generateAiGuessFlow',
-    inputSchema: GenerateGuessInputSchema,
+    inputSchema: GenerateGuessInputSchema, // Flow input remains the same
     outputSchema: GenerateGuessOutputSchema,
   },
   async (input) => {
     const unrevealedGrid = input.gridWords.filter(w => !input.revealedWords.includes(w));
-    const finalInput = {
+    
+    const baseInputForPrompt = {
       ...input,
       aiGreenWords: input.aiGreenWords.filter(w => unrevealedGrid.includes(w)),
       aiAssassinWords: input.aiAssassinWords.filter(w => unrevealedGrid.includes(w)),
     };
 
-    const {output} = await generateGuessPrompt(finalInput);
+    // Enrich the input for the prompt template with the boolean flag
+    const enrichedInputForPrompt = {
+        ...baseInputForPrompt,
+        isSuddenDeathScenario: baseInputForPrompt.clueWord === "FIND_GREEN_AGENT_SUDDEN_DEATH",
+    };
+
+    const {output} = await generateGuessPrompt(enrichedInputForPrompt);
     
     if (output && output.guessedWords) {
         output.guessedWords = output.guessedWords.filter(gw => input.gridWords.includes(gw) && !input.revealedWords.includes(gw));
         // In sudden death, AI should only provide one guess
-        if (input.clueWord === "FIND_GREEN_AGENT_SUDDEN_DEATH" && output.guessedWords.length > 1) {
+        if (enrichedInputForPrompt.isSuddenDeathScenario && output.guessedWords.length > 1) {
             output.guessedWords = output.guessedWords.slice(0,1);
         }
     }
     return output!;
   }
 );
+
