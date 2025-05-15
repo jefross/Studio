@@ -10,8 +10,11 @@ body {
   :root {
     --background: 120 40% 18%; /* Dark Forest Green (Cover Edges) */
     --foreground: 80 60% 90%; /* Light Greenish-White (Cover Title Text) */
-    --card: 110 30% 28%; /* Medium-Dark Green (Unrevealed Cards) */
-    --card-foreground: 80 60% 90%; /* Light Text on Cards */
+
+    /* Updated for high-contrast cards */
+    --card: 48 33% 92%; /* Light Parchment/Cream for unrevealed cards */
+    --card-foreground: 45 15% 25%; /* Dark Brownish Gray for text on unrevealed cards */
+    
     --popover: 110 30% 22%; /* Darker Green for Popovers */
     --popover-foreground: 80 60% 90%;
     --primary: 80 70% 50%; /* Bright Lime/Yellowish-Green (Cover Center, Green Agent Cards) */
@@ -24,7 +27,10 @@ body {
     --accent-foreground: 0 0% 10%; /* Dark Text on Accent */
     --destructive: 0 70% 45%; /* Strong Red (Assassin) */
     --destructive-foreground: 0 0% 98%; /* Light Text on Destructive */
-    --border: 110 25% 38%; /* Border Color */
+    
+    /* Updated border for more definition */
+    --border: 110 25% 30%; /* Darker Greenish Border */
+    
     --input: 110 30% 25%; /* Input Background */
     --ring: 80 70% 55%; /* Ring Color (Focus) */
 
@@ -52,8 +58,11 @@ body {
   .dark {
     --background: 120 50% 12%; /* Even Darker Forest Green */
     --foreground: 80 70% 92%; 
-    --card: 110 35% 22%;
-    --card-foreground: 80 70% 92%;
+
+    /* Dark mode cards remain dark with light text for consistency */
+    --card: 110 35% 22%; /* Dark Green for unrevealed cards in dark mode */
+    --card-foreground: 80 70% 92%; /* Light text on dark cards */
+
     --popover: 110 35% 18%;
     --popover-foreground: 80 70% 92%;
     --primary: 80 75% 55%; /* Slightly More Vibrant Primary */
@@ -66,7 +75,10 @@ body {
     --accent-foreground: 0 0% 8%;
     --destructive: 0 75% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 110 30% 32%;
+
+    /* Updated border for dark mode */
+    --border: 110 30% 25%; /* Slightly darker border for dark mode definition */
+    
     --input: 110 35% 20%;
     --ring: 80 75% 60%;
     
