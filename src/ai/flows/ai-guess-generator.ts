@@ -39,7 +39,7 @@ const GenerateGuessOutputSchema = z.object({
   reasoning: z
     .string()
     .optional()
-    .describe('The AI reasoning behind the chosen guesses.'),
+    .describe('The AI reasoning behind the chosen guesses or decision to pass.'),
 });
 export type GenerateGuessOutput = z.infer<typeof GenerateGuessOutputSchema>;
 
@@ -100,7 +100,7 @@ ABSOLUTELY AVOID your assassin words.
 Do not guess any words from the 'revealedWords' list.
 The number of words in your 'guessedWords' list should be between 1 and (clueNumber + 1) if clueNumber > 0, or exactly 1 if clueNumber is 0. Be strategic about the number of words.
 
-Respond with the 'guessedWords' array and your 'reasoning'. If you think no words match, provide an empty 'guessedWords' array.
+Respond with the 'guessedWords' array and your 'reasoning'. If you think no words match or you decide to pass, provide an empty 'guessedWords' array and explain your reasoning for passing.
 `,
 });
 
