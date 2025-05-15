@@ -174,7 +174,7 @@ export default function CodenamesDuetPage() {
       const { activeClue, keyCardSetup, revealedStates: currentRevealedStates, guessesMadeForClue, gridWords, currentTurn } = prev;
 
       // In Duet, the card's identity is based on the CLUE GIVER's key.
-      const clueGiverPlayerType = currentTurn === 'ai_clue' ? 'ai' : 'human';
+      const clueGiverPlayerType = currentTurn === 'ai_clue' ? 'ai' : 'human'; // If AI is giving clue, human is guessing, use AI's key
       const cardIdentityOnClueGiverSide = keyCardSetup[cardId][clueGiverPlayerType];
 
       const clueGiverName = clueGiverPlayerType === 'ai' ? 'The AI' : 'You';
@@ -314,25 +314,16 @@ export default function CodenamesDuetPage() {
     }
     setGameState(prev => prev ? { ...prev, isAIClueLoading: true, gameMessage: "AI is thinking of a clue..." } : null);
 
-    // Ensure we use the latest gameState for AI input
-    let currentGameStateForAI: GameState | null = null;
-    setGameState(prev => { currentGameStateForAI = prev; return prev; });
-
-    if (!currentGameStateForAI) {
-      toast({ title: "AI Error", description: "Failed to get current game state for AI clue.", variant: "destructive" });
-      setGameState(prev => prev ? { ...prev, isAIClueLoading: false } : null);
-      return;
-    }
-
+    // gameState from closure is reliable here
     try {
-      const aiPerspectiveKey = getPerspective(currentGameStateForAI.keyCardSetup, 'ai');
-      const humanPerspectiveKey = getPerspective(currentGameStateForAI.keyCardSetup, 'human');
+      const aiPerspectiveKey = getPerspective(gameState.keyCardSetup, 'ai');
+      const humanPerspectiveKey = getPerspective(gameState.keyCardSetup, 'human');
 
-      const unrevealedAIGreens = currentGameStateForAI.gridWords.filter((word, i) =>
-        aiPerspectiveKey[i] === 'GREEN' && currentGameStateForAI.revealedStates[i] === 'hidden'
+      const unrevealedAIGreens = gameState.gridWords.filter((word, i) =>
+        aiPerspectiveKey[i] === 'GREEN' && gameState.revealedStates[i] === 'hidden'
       );
-      const humanAssassins = currentGameStateForAI.gridWords.filter((word, i) =>
-        humanPerspectiveKey[i] === 'ASSASSIN' && currentGameStateForAI.revealedStates[i] === 'hidden'
+      const humanAssassins = gameState.gridWords.filter((word, i) =>
+        humanPerspectiveKey[i] === 'ASSASSIN' && gameState.revealedStates[i] === 'hidden'
       );
 
       if (unrevealedAIGreens.length === 0) {
@@ -349,10 +340,10 @@ export default function CodenamesDuetPage() {
       }
 
       const aiClueResponse = await generateAIClue({
-        grid: currentGameStateForAI.gridWords,
+        grid: gameState.gridWords,
         greenWords: unrevealedAIGreens,
         assassinWords: humanAssassins,
-        timerTokens: currentGameStateForAI.timerTokens,
+        timerTokens: gameState.timerTokens,
       });
 
       setGameState(prev => prev ? {
@@ -386,8 +377,7 @@ export default function CodenamesDuetPage() {
       return;
     }
     
-    // Capture the state at the beginning of this async operation.
-    const currentProcessingGameState = gameState;
+    const currentProcessingGameState = gameState; // Use state from closure
 
     setGameState(prevGS => {
       if (!prevGS) return null;
@@ -427,12 +417,12 @@ export default function CodenamesDuetPage() {
       if (!aiGuessResponse.guessedWords || aiGuessResponse.guessedWords.length === 0) {
         toast({ title: "AI Action: Pass", description: `AI decided to pass. Reasoning: ${aiGuessResponse.reasoning || 'No specific reason given.'}` });
         
-        let passedTurnGameStateShouldEndTurn = true; // Assume token used on pass unless sudden death dictates otherwise
+        let passedTurnGameStateShouldEndTurn = true; 
         setGameState(prev => {
           if(!prev) return null;
           const updatedState = {...prev, gameMessage: `AI passes. ${aiGuessResponse.reasoning || ''}`, isAIGuessing: false};
            if (prev.inSuddenDeath) {
-              passedTurnGameStateShouldEndTurn = false; // Sudden death turn change is handled by processSuddenDeathReveal or this logic
+              passedTurnGameStateShouldEndTurn = false; 
               const humanCanStillGuessSD = countRemainingGreens(getPerspective(prev.keyCardSetup, 'human'), prev.revealedStates) > 0;
               if (humanCanStillGuessSD) {
                   updatedState.suddenDeathGuesser = 'human';
@@ -445,8 +435,6 @@ export default function CodenamesDuetPage() {
            return updatedState;
         });
 
-        // Only end player turn if not in sudden death (sudden death handles its own turn progression)
-        // and if the game isn't already over.
         let latestStateAfterAIPass: GameState | null = null;
         setGameState(prev => { latestStateAfterAIPass = prev; return prev; });
 
@@ -463,29 +451,23 @@ export default function CodenamesDuetPage() {
       const guessesToProcess = currentProcessingGameState.inSuddenDeath ? aiGuessResponse.guessedWords.slice(0,1) : aiGuessResponse.guessedWords;
 
       for (const guessedWord of guessesToProcess) {
-        // Use the gridWords from the state captured at the start of this function
         const cardId = currentProcessingGameState.gridWords.indexOf(guessedWord);
         if (cardId === -1) {
           toast({ title: "AI Error", description: `AI tried to guess '${guessedWord}', which is not on the board. Skipping.`});
           continue;
         }
         
-        // If a previous reveal in this loop ended the game, stop further processing.
         if (gameEndedByAI) break;
         
-        // Check if card is already revealed using the most current state available to processReveal/SuddenDeathReveal
-        // This check is implicitly handled by processReveal/processSuddenDeathReveal using their `prev` state.
-        // We mainly need to ensure `gameEndedByAI` stops the loop.
-
         await delay(1500); 
         
-        if (currentProcessingGameState.inSuddenDeath) { // Check against the state from start of function
+        if (currentProcessingGameState.inSuddenDeath) { 
             const sdRevealResult = processSuddenDeathReveal(cardId, 'ai');
             toast({title: `AI Sudden Death Guess: ${guessedWord.toUpperCase()}`, description: sdRevealResult.newMessage});
             if (sdRevealResult.newGameOver) {
                 gameEndedByAI = true; 
             }
-            break; // AI makes only one guess in Sudden Death
+            break; 
         } else { 
             const revealResult = processReveal(cardId, 'ai');
             toast({title: `AI Guesses: ${guessedWord.toUpperCase()}`, description: revealResult.newMessage});
@@ -525,7 +507,7 @@ export default function CodenamesDuetPage() {
               return null; 
           }
           const wasInSuddenDeath = prev.inSuddenDeath;
-          errorStateNeedsTurnEnd = !wasInSuddenDeath; // Don't auto end turn if it was sudden death, handle specific SD logic
+          errorStateNeedsTurnEnd = !wasInSuddenDeath; 
 
           const updatedState = { ...prev, isAIGuessing: false };
           if (wasInSuddenDeath) { 
@@ -623,9 +605,6 @@ export default function CodenamesDuetPage() {
     const { newMessage, newGameOver, turnShouldEnd } = processReveal(id, 'human');
     toast({ title: "Guess Result", description: newMessage });
 
-    // humanClueGuessingConcluded is set by processReveal.
-    // GameEndModal will appear via gameState.gameOver.
-    // Player needs to click "End Turn" button if it wasn't an assassin and turn should end.
   }, [gameState, processReveal, processSuddenDeathReveal, toast, setGameState]);
 
   if (!gameState) {
