@@ -91,3 +91,20 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Confetti Animations */
+@keyframes fall {
+  to {
+    transform: translateY(120vh) rotate(720deg); /* Fall further below viewport and spin more */
+    opacity: 0;
+  }
+}
+
+@keyframes sway {
+  0%, 100% {
+    transform: translateX(-15px) rotate(-5deg);
+  }
+  50% {
+    transform: translateX(15px) rotate(15deg);
+  }
+}
