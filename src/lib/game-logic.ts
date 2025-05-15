@@ -42,7 +42,7 @@ export function generateKeyCardSetup(): KeyCardSetup {
   return shuffleArray(assignments);
 }
 
-export function initializeGameState(): GameState {
+export function initializeGameState(initialTokens: number = INITIAL_TIMER_TOKENS): GameState {
   const gridWords = selectRandomWords(TOTAL_WORDS_IN_GRID);
   const keyCardSetup = generateKeyCardSetup();
   const revealedStates: RevealedState[] = Array(TOTAL_WORDS_IN_GRID).fill('hidden');
@@ -51,7 +51,7 @@ export function initializeGameState(): GameState {
     gridWords,
     keyCardSetup,
     revealedStates,
-    timerTokens: INITIAL_TIMER_TOKENS,
+    timerTokens: initialTokens,
     currentTurn: 'ai_clue' as const, // AI gives the first clue
     activeClue: null,
     guessesMadeForClue: 0,
