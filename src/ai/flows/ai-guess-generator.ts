@@ -20,10 +20,10 @@ const GenerateGuessInputSchema = z.object({
     .describe('The 5x5 grid of words visible on the board.'),
   aiGreenWords: z
     .array(z.string())
-    .describe("The words that are green (targets) for the AI player from its perspective and are not yet revealed."),
+    .describe("The words that are green (targets) for the AI player from its perspective and are not yet revealed. This is for the AI's general knowledge but not the primary target when guessing the human's clue."),
   aiAssassinWords: z
     .array(z.string())
-    .describe("The words that are assassins for the AI player from its perspective and are not yet revealed."),
+    .describe("The words that are assassins for the AI player from its perspective and are not yet revealed. The AI must avoid guessing these."),
   revealedWords: z
     .array(z.string())
     .describe("A list of words that have already been revealed on the board."),
@@ -57,8 +57,8 @@ const generateGuessPrompt = ai.definePrompt({
 Clue Word: {{clueWord}}
 Clue Number: {{clueNumber}}
 
-Your goal is to guess words on the board that match this clue.
-You can guess up to {{clueNumber}} words if they are your green words. If {{clueNumber}} is 0, you can guess 1 word. If {{clueNumber}} is greater than 0, you can make one extra guess (total {{clueNumber}}+1 guesses) if all previous guesses for this clue were green words for you.
+Your goal is to identify words on the board that your human partner is hinting at with their clue. The words you guess will be evaluated against *your human partner's* key card.
+You can suggest up to {{clueNumber}} words if the clue number is greater than 0. If all your guesses for this clue turn out to be green for your partner, you are allowed one extra bonus guess (making it {{clueNumber}}+1 words in total for this clue). If the clue number is 0, you can guess exactly 1 word.
 
 These are ALL the words currently on the board:
 {{#each gridWords}}
@@ -74,16 +74,7 @@ These words have ALREADY BEEN REVEALED and you CANNOT guess them:
   None
 {{/if}}
 
-From YOUR PERSPECTIVE, these are your TARGET (GREEN) words that are NOT YET REVEALED (you want to guess these if they match the clue):
-{{#if aiGreenWords.length}}
-  {{#each aiGreenWords}}
-    {{this}}{{#unless @last}}, {{/unless}}
-  {{/each}}
-{{else}}
-  None remaining
-{{/if}}
-
-From YOUR PERSPECTIVE, these are ASSASSIN words that are NOT YET REVEALED (you MUST AVOID guessing these):
+From YOUR PERSPECTIVE (AI player), these are your ASSASSIN words that are NOT YET REVEALED. You MUST AVOID guessing these, as revealing one will end the game for your team:
 {{#if aiAssassinWords.length}}
   {{#each aiAssassinWords}}
     {{this}}{{#unless @last}}, {{/unless}}
@@ -92,15 +83,24 @@ From YOUR PERSPECTIVE, these are ASSASSIN words that are NOT YET REVEALED (you M
   None
 {{/if}}
 
+For your general awareness, from YOUR PERSPECTIVE (AI player), these are your GREEN (target) words that are NOT YET REVEALED:
+{{#if aiGreenWords.length}}
+  {{#each aiGreenWords}}
+    {{this}}{{#unless @last}}, {{/unless}}
+  {{/each}}
+{{else}}
+  None remaining
+{{/if}}
+While your main goal is to guess your partner's targets based on their clue, if a word strongly matches the clue AND is also one of your green words AND is not one of your assassins, it might be a good candidate. However, prioritize matching your partner's clue accurately.
+
 Carefully analyze the clue ('{{clueWord}}' for {{clueNumber}}) and the available unrevealed words.
 Choose an ordered list of words from the gridWords that you want to guess.
-Your list should contain words that best match the clue.
-Prioritize guessing your green words.
-ABSOLUTELY AVOID your assassin words.
+Your list should contain words that best match the clue your partner gave.
+ABSOLUTELY AVOID words that are ASSASSINS from YOUR perspective (listed above).
 Do not guess any words from the 'revealedWords' list.
-The number of words in your 'guessedWords' list should be between 1 and (clueNumber + 1) if clueNumber > 0, or exactly 1 if clueNumber is 0. Be strategic about the number of words.
+The number of words in your 'guessedWords' list should be between 1 and (clueNumber + 1) if clueNumber > 0, or exactly 1 if clueNumber is 0. Be strategic about the number of words you list.
 
-Respond with the 'guessedWords' array and your 'reasoning'. If you think no words match or you decide to pass, provide an empty 'guessedWords' array and explain your reasoning for passing.
+Respond with the 'guessedWords' array and your 'reasoning'. If you think no words match the clue, or the risk of hitting one of YOUR assassins is too high given the options, provide an empty 'guessedWords' array and explain your reasoning for passing.
 `,
 });
 
@@ -128,3 +128,4 @@ const generateAiGuessFlow = ai.defineFlow(
     return output!;
   }
 );
+
