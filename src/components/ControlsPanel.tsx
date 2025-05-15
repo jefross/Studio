@@ -1,5 +1,5 @@
 
-import type React from 'react';
+import React from 'react';
 import type { Clue, PlayerTurn } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,7 @@ interface ControlsPanelProps {
   onGetAIClue: () => void;
   onEndTurn: () => void;
   isGuessingPhase: boolean;
-  guessesLeftForClue: number; 
+  guessesLeftForClue: number;
 }
 
 const ControlsPanel: React.FC<ControlsPanelProps> = ({
@@ -51,7 +51,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
     }
   };
 
-  const whoseTurnText = currentTurn === 'human_clue' 
+  const whoseTurnText = currentTurn === 'human_clue'
     ? (activeClue ? "AI is Guessing" : "Your Turn to Give Clue")
     : (activeClue ? "Your Turn to Guess" : "AI's Turn to Give Clue");
   const turnIcon = currentTurn === 'human_clue' ? <User className="mr-2 h-5 w-5" /> : <BotIcon className="mr-2 h-5 w-5" />;
@@ -78,7 +78,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
             </div>
           </div>
         </div>
-        
+
         <div className="flex justify-around text-xs text-muted-foreground px-2 py-1 bg-muted/30 rounded-md">
             <div className="flex items-center">
                 <User className="mr-1 h-3 w-3" />
@@ -112,7 +112,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 id="clueCount"
                 type="number"
                 min="0"
-                max="9" 
+                max="9"
                 value={humanClueCount}
                 onChange={(e) => {
                     const val = e.target.value;
@@ -162,7 +162,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
             </CardContent>
           </Card>
         )}
-        
+
         {isGuessingPhase && guessesLeftForClue > 0 && (
             <Button onClick={onEndTurn} variant="outline" className="w-full">
              <CheckCircle className="mr-2 h-4 w-4" /> End Guessing Turn Voluntarily
