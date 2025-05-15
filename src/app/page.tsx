@@ -25,7 +25,7 @@ export default function CodenamesDuetPage() {
   const resetGame = useCallback(() => {
     setGameState(initializeGameState());
   }, []);
-  
+
   const endPlayerTurn = useCallback((useTimerToken: boolean) => {
     setGameState(prev => {
       if (!prev || prev.gameOver) return prev;
@@ -47,9 +47,9 @@ export default function CodenamesDuetPage() {
             ...prev,
             gameOver: true,
             gameMessage: finalMessage,
-            activeClue: null, // Ends current clue phase
+            activeClue: null, 
             timerTokens: useTimerToken ? Math.max(0, prev.timerTokens - 1) : prev.timerTokens,
-            humanClueGuessingConcluded: false, // Reset for next potential human guess phase
+            humanClueGuessingConcluded: false, 
         };
       }
 
@@ -59,11 +59,11 @@ export default function CodenamesDuetPage() {
       return {
         ...prev,
         currentTurn: nextTurn,
-        activeClue: null, // Ends current clue phase
+        activeClue: null, 
         guessesMadeForClue: 0,
         timerTokens: newTimerTokens,
         gameMessage: `${nextTurn === 'ai_clue' ? "AI's" : "Your"} turn to give a clue.`,
-        humanClueGuessingConcluded: false, // Reset for next potential human guess phase
+        humanClueGuessingConcluded: false, 
       };
     });
   }, [setGameState]);
@@ -71,36 +71,39 @@ export default function CodenamesDuetPage() {
   const processReveal = useCallback((cardId: number, perspectiveOfGuesser: 'human' | 'ai'): { turnShouldEnd: boolean, useTokenOnTurnEnd: boolean, correctGuess: boolean, newGameOver: boolean, newMessage: string } => {
     let result = { turnShouldEnd: false, useTokenOnTurnEnd: false, correctGuess: false, newGameOver: false, newMessage: "" };
     setGameState(prev => {
-      if (!prev || prev.gameOver || (perspectiveOfGuesser === 'human' && (!prev.activeClue || prev.humanClueGuessingConcluded)) || prev.revealedStates[cardId] !== 'hidden') return prev;
+      if (!prev || prev.gameOver || prev.revealedStates[cardId] !== 'hidden') return prev;
+      // Human guessing specific checks
+      if (perspectiveOfGuesser === 'human' && (!prev.activeClue || prev.humanClueGuessingConcluded)) return prev;
+
 
       const { activeClue, keyCardSetup, revealedStates: currentRevealedStates, guessesMadeForClue, gridWords } = prev;
       
-      const clueGiverPerspective = perspectiveOfGuesser === 'human' ? 'ai' : 'human';
-      const cardIdentityOnClueGiverSide = keyCardSetup[cardId][clueGiverPerspective];
-      const clueGiverName = clueGiverPerspective === 'ai' ? 'the AI' : 'you';
+      // CORRECTED: Card identity is based on CLUE GIVER'S key
+      const clueGiverPerspectiveKey = perspectiveOfGuesser === 'human' ? keyCardSetup[cardId].ai : keyCardSetup[cardId].human;
+      const clueGiverName = perspectiveOfGuesser === 'human' ? 'the AI' : 'you';
       
       const newRevealedStates = [...currentRevealedStates];
       let newGuessesMade = guessesMadeForClue + 1;
       let newHumanClueGuessingConcluded = prev.humanClueGuessingConcluded;
 
-      if (cardIdentityOnClueGiverSide === 'ASSASSIN') {
+      if (clueGiverPerspectiveKey === 'ASSASSIN') {
         newRevealedStates[cardId] = 'assassin';
         result.newMessage = `Assassin hit! ${clueGiverName} (clue giver) had an assassin at ${gridWords[cardId].toUpperCase()}. Game Over!`;
         result.newGameOver = true;
-        result.turnShouldEnd = true; // Turn ends immediately
+        result.turnShouldEnd = true; 
         if (perspectiveOfGuesser === 'human') newHumanClueGuessingConcluded = true;
-      } else if (cardIdentityOnClueGiverSide === 'GREEN') {
+      } else if (clueGiverPerspectiveKey === 'GREEN') {
         newRevealedStates[cardId] = 'green';
         result.correctGuess = true;
         result.newMessage = `Correct! ${gridWords[cardId].toUpperCase()} was an agent for ${clueGiverName} (clue giver).`;
         
-        if (activeClue) { // activeClue should exist if we are in guessing phase
-            const maxGuessesAllowed = activeClue.count === 0 ? (perspectiveOfGuesser === 'human' ? Infinity : 1) : activeClue.count + 1; // Human gets unlimited on 0 for now.
-            if (newGuessesMade >= maxGuessesAllowed && activeClue.count !==0) { // For clue 0, human can continue. AI stops after 1.
+        if (activeClue) { 
+            const maxGuessesAllowed = activeClue.count === 0 ? (perspectiveOfGuesser === 'human' ? Infinity : 1) : activeClue.count + 1; 
+            if (newGuessesMade >= maxGuessesAllowed && activeClue.count !==0) { 
               result.turnShouldEnd = true;
               result.newMessage += ` Max guesses for this clue reached by ${perspectiveOfGuesser}.`;
               if (perspectiveOfGuesser === 'human') newHumanClueGuessingConcluded = true;
-            } else if (activeClue.count === 0 && perspectiveOfGuesser === 'ai') { // AI only gets one guess on count 0
+            } else if (activeClue.count === 0 && perspectiveOfGuesser === 'ai') { 
                 result.turnShouldEnd = true;
                  result.newMessage += ` AI made its one guess for clue '0'.`;
             } else {
@@ -134,7 +137,7 @@ export default function CodenamesDuetPage() {
         guessesMadeForClue: newGuessesMade,
         totalGreensFound: updatedTotalGreensFound,
         humanClueGuessingConcluded: newHumanClueGuessingConcluded,
-        activeClue: result.newGameOver ? null : prev.activeClue, // activeClue nullified by endPlayerTurn later if needed
+        activeClue: result.newGameOver ? null : prev.activeClue, 
       };
     });
     return result;
@@ -149,50 +152,12 @@ export default function CodenamesDuetPage() {
       setGameState(prev => prev ? { ...prev, gameOver: true, gameMessage: 'All 15 agents contacted! You win!', activeClue: null } : null);
       return true;
     }
-    if (gameState.timerTokens <= 0 && gameState.currentTurn !== 'human_clue' && gameState.currentTurn !== 'ai_clue') { // Check only if not in clue giving phase
+    if (gameState.timerTokens <= 0 && gameState.currentTurn !== 'human_clue' && gameState.currentTurn !== 'ai_clue') { 
       setGameState(prev => prev ? { ...prev, gameOver: true, gameMessage: 'Out of time! Not all agents were contacted. You lose.', activeClue: null } : null);
       return true;
     }
     return false;
   }, [gameState, setGameState]);
-
-  useEffect(() => {
-    setGameState(initializeGameState());
-  }, [resetGame]);
-
-  useEffect(() => {
-    if (gameState && !gameState.isAIClueLoading && !gameState.isAIGuessing) {
-        checkWinOrLossCondition();
-    }
-  }, [gameState, checkWinOrLossCondition]);
-
-  const handleCardClick = useCallback(async (id: number) => {
-    if (!gameState || gameState.gameOver || !gameState.activeClue || gameState.revealedStates[id] !== 'hidden' || gameState.isAIClueLoading || gameState.isAIGuessing || gameState.humanClueGuessingConcluded) return;
-    if (gameState.currentTurn !== 'ai_clue') return; 
-
-    const currentGuessesMade = gameState.guessesMadeForClue;
-    const clueCount = gameState.activeClue.count;
-    // For clue 0, human can make "unlimited" correct green guesses. For other clues, N+1.
-    const maxGuessesThisClue = clueCount === 0 ? Infinity : clueCount + 1; 
-    if (currentGuessesMade >= maxGuessesThisClue && clueCount !== 0) {
-      toast({ title: "Max Guesses", description: "You've reached the maximum guesses for this clue." });
-      return;
-    }
-
-    // processReveal will update gameState, including humanClueGuessingConcluded if a bystander/assassin is hit or max guesses.
-    const { newMessage, newGameOver } = processReveal(id, 'human');
-    toast({ title: "Guess Result", description: newMessage });
-
-    // If game is over, GameEndModal will show.
-    // If humanClueGuessingConcluded is true (e.g. bystander hit), player must click "End Turn" button.
-    // No direct call to endPlayerTurn here anymore, unless game over.
-    if (newGameOver) {
-        // Game over state is set within processReveal, which triggers modal.
-        // Ensure activeClue is nullified if game over occurs mid-turn.
-        setGameState(prev => prev ? {...prev, activeClue: null} : null);
-    }
-
-  }, [gameState, processReveal, toast, setGameState]);
 
   const handleAIClueGeneration = useCallback(async () => {
     if (!gameState) {
@@ -202,12 +167,15 @@ export default function CodenamesDuetPage() {
     setGameState(prev => prev ? { ...prev, isAIClueLoading: true, gameMessage: "AI is thinking of a clue..." } : null);
 
     try {
+      // AI gives clue based on its own key card (what it wants the human to guess)
       const aiPerspectiveKey = getPerspective(gameState.keyCardSetup, 'ai');
       const unrevealedAIGreens = gameState.gridWords.filter((word, i) => 
         aiPerspectiveKey[i] === 'GREEN' && gameState.revealedStates[i] === 'hidden'
       );
-      const aiAssassins = gameState.gridWords.filter((word, i) => 
-        aiPerspectiveKey[i] === 'ASSASSIN' && gameState.revealedStates[i] === 'hidden'
+      // Assassins for the human (AI must avoid giving clues that lead human to their own assassins)
+      const humanPerspectiveKey = getPerspective(gameState.keyCardSetup, 'human');
+      const humanAssassins = gameState.gridWords.filter((word, i) => 
+        humanPerspectiveKey[i] === 'ASSASSIN' && gameState.revealedStates[i] === 'hidden'
       );
 
       if (unrevealedAIGreens.length === 0) {
@@ -215,18 +183,18 @@ export default function CodenamesDuetPage() {
         setGameState(prev => prev ? { 
             ...prev, 
             isAIClueLoading: false, 
-            activeClue: null, // AI passes, so no active clue
+            activeClue: null, 
             guessesMadeForClue: 0,
-            humanClueGuessingConcluded: false, // Reset this flag
+            humanClueGuessingConcluded: false,
         } : null);
-        endPlayerTurn(false); // AI passes, turn ends, no token used for passing clue turn
+        endPlayerTurn(false); 
         return;
       }
 
       const aiClueResponse = await generateAIClue({
         grid: gameState.gridWords,
-        greenWords: unrevealedAIGreens,
-        assassinWords: aiAssassins,
+        greenWords: unrevealedAIGreens, // Words AI wants human to guess
+        assassinWords: humanAssassins, // Words AI wants human to avoid
         timerTokens: gameState.timerTokens,
       });
       
@@ -236,7 +204,7 @@ export default function CodenamesDuetPage() {
         isAIClueLoading: false,
         gameMessage: `AI's Clue: ${aiClueResponse.clueWord.toUpperCase()} for ${aiClueResponse.clueNumber}. Your turn to guess.`,
         guessesMadeForClue: 0,
-        humanClueGuessingConcluded: false, // Reset for human's guessing phase
+        humanClueGuessingConcluded: false, 
       } : null);
       toast({ title: "AI Clue", description: `${aiClueResponse.clueWord.toUpperCase()} - ${aiClueResponse.clueNumber}. Reasoning: ${aiClueResponse.reasoning || 'N/A'}` });
 
@@ -248,33 +216,43 @@ export default function CodenamesDuetPage() {
   }, [gameState, toast, setGameState, endPlayerTurn]);
 
   const handleAIGuesses = useCallback(async (clue: Clue) => {
-    setGameState(prevGS => {
-        if (!prevGS || prevGS.gameOver) return prevGS;
-        return { ...prevGS, isAIGuessing: true, gameMessage: `AI is considering guesses for your clue: ${clue.word.toUpperCase()} ${clue.count}...` };
-    });
-    
-    let currentGS: GameState | null = null;
-    setGameState(prev => { currentGS = prev; return prev; });
-
-    if (!currentGS) {
-      toast({ title: "AI Error", description: "Cannot get current game state for AI.", variant: "destructive"});
+    // Guard at the beginning of handleAIGuesses
+    if (!gameState || gameState.gameOver || gameState.isAIGuessing) {
+      toast({ title: "AI Action Blocked", description: "AI cannot guess at this time.", variant: "default" });
+      if (gameState && gameState.isAIGuessing) { // If already guessing, just return
+         return;
+      }
+      // If game over or no game state, reset isAIGuessing if it was somehow true
       setGameState(prev => prev ? { ...prev, isAIGuessing: false } : null);
-      endPlayerTurn(true);
+      // Potentially end turn if this was called erroneously after game over and not already AI's turn to guess
+      if (gameState && gameState.gameOver && gameState.currentTurn === 'human_clue' && gameState.activeClue) {
+         endPlayerTurn(false); // No token if game ended
+      }
       return;
     }
 
-    const aiPerspectiveKey = getPerspective(currentGS.keyCardSetup, 'ai');
-    const aiUnrevealedGreenWords = currentGS.gridWords.filter((word: string, i: number) => aiPerspectiveKey[i] === 'GREEN' && currentGS!.revealedStates[i] === 'hidden');
-    const aiUnrevealedAssassinWords = currentGS.gridWords.filter((word: string, i: number) => aiPerspectiveKey[i] === 'ASSASSIN' && currentGS!.revealedStates[i] === 'hidden');
-    const revealedWordsList = currentGS.gridWords.filter((_: string, i: number) => currentGS!.revealedStates[i] !== 'hidden');
+    setGameState(prevGS => ({
+      ...prevGS!, 
+      isAIGuessing: true,
+      gameMessage: `AI is considering guesses for your clue: ${clue.word.toUpperCase()} ${clue.count}...`
+    }));
+
+    // Use the gameState from the closure for generating AI prompt.
+    // This is the state *before* we set isAIGuessing to true, which is correct for input.
+    const currentGameStateForAI = gameState; // Snapshot for AI's decision process
+
+    const aiPerspectiveKey = getPerspective(currentGameStateForAI.keyCardSetup, 'ai');
+    const aiUnrevealedGreenWords = currentGameStateForAI.gridWords.filter((word: string, i: number) => aiPerspectiveKey[i] === 'GREEN' && currentGameStateForAI.revealedStates[i] === 'hidden');
+    const aiUnrevealedAssassinWords = currentGameStateForAI.gridWords.filter((word: string, i: number) => aiPerspectiveKey[i] === 'ASSASSIN' && currentGameStateForAI.revealedStates[i] === 'hidden');
+    const revealedWordsList = currentGameStateForAI.gridWords.filter((_: string, i: number) => currentGameStateForAI.revealedStates[i] !== 'hidden');
 
     try {
       const aiGuessResponse = await generateAiGuess({
         clueWord: clue.word,
         clueNumber: clue.count,
-        gridWords: currentGS.gridWords,
-        aiGreenWords: aiUnrevealedGreenWords,
-        aiAssassinWords: aiUnrevealedAssassinWords,
+        gridWords: currentGameStateForAI.gridWords,
+        aiGreenWords: aiUnrevealedGreenWords, // Words AI wants to hit from its own key
+        aiAssassinWords: aiUnrevealedAssassinWords, // Assassins AI wants to avoid from its own key
         revealedWords: revealedWordsList,
       });
 
@@ -286,46 +264,43 @@ export default function CodenamesDuetPage() {
         endPlayerTurn(true); // AI passes guess, token used
       } else {
         let turnEndedMidGuess = false;
-        let tokenUsedForTurnEnd = false; // This will be determined by processReveal
+        let tokenUsedForTurnEnd = false; 
         let gameEndedMidGuess = false;
         
         for (const guessedWord of aiGuessResponse.guessedWords) {
           let cardId = -1;
           let cardIsStillHidden = false;
-          // Critical: ensure operations on gameState are atomic or use latest from setGameState callback
+          
           setGameState(prevForCardLookup => {
             if (!prevForCardLookup) return prevForCardLookup;
             cardId = prevForCardLookup.gridWords.indexOf(guessedWord);
             if (cardId !== -1 && prevForCardLookup.revealedStates[cardId] === 'hidden') {
               cardIsStillHidden = true;
             }
-            // Check if game already ended from a previous AI guess in this loop
             if(prevForCardLookup.gameOver) gameEndedMidGuess = true;
             return prevForCardLookup;
           });
 
-          if (gameEndedMidGuess) break; // Stop if a previous guess in this loop ended the game
+          if (gameEndedMidGuess) break; 
           if (cardId === -1 || !cardIsStillHidden) continue; 
 
           await delay(1000);
-          const revealResult = processReveal(cardId, 'ai');
+          // AI is guessing, so perspectiveOfGuesser is 'ai'
+          // The card identity will be based on the human's (clue giver's) key.
+          const revealResult = processReveal(cardId, 'ai'); 
           toast({title: `AI Guesses: ${guessedWord.toUpperCase()}`, description: revealResult.newMessage});
           
           if (revealResult.newGameOver) {
              gameEndedMidGuess = true;
-             // No need to explicitly call endPlayerTurn, game over state handles it.
-             // Active clue is nullified by processReveal if game over.
              break; 
           }
-          if (revealResult.turnShouldEnd) { // AI hit bystander, or max guesses for AI
+          if (revealResult.turnShouldEnd) { 
             turnEndedMidGuess = true;
             tokenUsedForTurnEnd = revealResult.useTokenOnTurnEnd;
             break;
           }
         }
         
-        // After loop, if game hasn't ended, then end AI's turn
-        // Read latest game over state
         let finalGameOverCheck = false;
         setGameState(prev => {
             if (prev) finalGameOverCheck = prev.gameOver;
@@ -333,32 +308,88 @@ export default function CodenamesDuetPage() {
         });
 
         if (!finalGameOverCheck) {
-             endPlayerTurn(turnEndedMidGuess ? tokenUsedForTurnEnd : false); // If AI turn ended by bystander, tokenUsedForTurnEnd is true. If it just made its guesses correctly, false.
+             endPlayerTurn(turnEndedMidGuess ? tokenUsedForTurnEnd : false); 
         }
       }
+      setGameState(prev => prev ? { ...prev, isAIGuessing: false } : null);
+
     } catch (error) {
       console.error("Error during AI guessing:", error);
       toast({ title: "AI Error", description: "AI had trouble making a guess. Turn passes.", variant: "destructive" });
-      endPlayerTurn(true); // Error, token used
-    } finally {
+      
+      // Check gameState directly before calling endPlayerTurn
+      // Use a functional update to get the latest state if needed for this check, though direct check might be fine
+      const gs = gameState; // Current scope gameState
+      if (gs && !gs.gameOver) {
+          endPlayerTurn(true); // Error, token used
+      }
       setGameState(prev => prev ? { ...prev, isAIGuessing: false } : null);
     }
-  }, [toast, processReveal, endPlayerTurn, setGameState]);
+  }, [gameState, toast, processReveal, endPlayerTurn, setGameState]);
+
 
   const handleHumanClueSubmit = useCallback((clue: Clue) => {
+    let shouldCallAIGuesses = false;
     setGameState(prev => {
-      if (!prev || prev.gameOver || prev.isAIGuessing || prev.isAIClueLoading) return prev;
+      if (!prev || prev.gameOver || prev.isAIGuessing || prev.isAIClueLoading) {
+        toast({ title: "Action Blocked", description: "Cannot submit clue at this time."});
+        return prev;
+      }
+      shouldCallAIGuesses = true;
       return {
         ...prev,
         activeClue: clue,
-        currentTurn: 'human_clue', 
+        // currentTurn remains 'human_clue' because human is giving the clue.
+        // AI will guess. After AI finishes, endPlayerTurn switches to 'ai_clue'.
         gameMessage: `Your Clue: ${clue.word.toUpperCase()} for ${clue.count}. AI is now 'guessing'.`,
-        guessesMadeForClue: 0,
-        humanClueGuessingConcluded: false, // Should not apply to AI's guessing phase
+        guessesMadeForClue: 0, 
+        // humanClueGuessingConcluded is for when human is guessing AI's clue. Reset if necessary, though not directly relevant here.
+        humanClueGuessingConcluded: false, 
       };
     });
-    handleAIGuesses(clue);
-  }, [setGameState, handleAIGuesses]);
+
+    if (shouldCallAIGuesses) {
+        handleAIGuesses(clue);
+    }
+  }, [setGameState, handleAIGuesses, toast]);
+
+  useEffect(() => {
+    setGameState(initializeGameState());
+  }, [resetGame]); // Only on explicit reset
+
+  useEffect(() => {
+    if (gameState && !gameState.isAIClueLoading && !gameState.isAIGuessing) {
+        checkWinOrLossCondition();
+    }
+  }, [gameState, checkWinOrLossCondition]);
+
+  const handleCardClick = useCallback(async (id: number) => {
+    if (!gameState || gameState.gameOver || !gameState.activeClue || gameState.revealedStates[id] !== 'hidden' || gameState.isAIClueLoading || gameState.isAIGuessing || gameState.humanClueGuessingConcluded) return;
+    // Ensure it's human's turn to guess (i.e., AI gave the clue, currentTurn is 'ai_clue')
+    if (gameState.currentTurn !== 'ai_clue') return; 
+
+    const currentGuessesMade = gameState.guessesMadeForClue;
+    const clueCount = gameState.activeClue.count;
+    const maxGuessesThisClue = clueCount === 0 ? Infinity : clueCount + 1; 
+    
+    if (currentGuessesMade >= maxGuessesThisClue && clueCount !== 0) {
+      toast({ title: "Max Guesses", description: "You've reached the maximum guesses for this clue." });
+      return;
+    }
+
+    // Human is guessing, so perspectiveOfGuesser is 'human'.
+    // The card identity will be based on the AI's (clue giver's) key.
+    const { newMessage, newGameOver, turnShouldEnd, useTokenOnTurnEnd } = processReveal(id, 'human');
+    toast({ title: "Guess Result", description: newMessage });
+    
+    if (newGameOver) {
+        setGameState(prev => prev ? {...prev, activeClue: null} : null);
+    } else if (turnShouldEnd) {
+        // humanClueGuessingConcluded is set inside processReveal.
+        // The player must now click the "End Turn" button.
+        // No automatic endPlayerTurn here unless it's game over.
+    }
+  }, [gameState, processReveal, toast, setGameState]);
   
   if (!gameState) {
     return (
@@ -376,12 +407,10 @@ export default function CodenamesDuetPage() {
     keyCardEntry: gameState.keyCardSetup[index],
   }));
   
-  // Number of guesses human has left for the current AI clue
-  const guessesLeftForThisClue = gameState.activeClue && !gameState.humanClueGuessingConcluded ?
+  const guessesLeftForThisClue = gameState.activeClue && !gameState.humanClueGuessingConcluded && gameState.currentTurn === 'ai_clue' ?
     Math.max(0, (gameState.activeClue.count === 0 ? Infinity : gameState.activeClue.count + 1) - gameState.guessesMadeForClue)
     : 0;
 
-  // Is it the human's turn to make a guess for an AI clue?
   const isHumanCurrentlyGuessingPhase =
     gameState.currentTurn === 'ai_clue' &&
     !!gameState.activeClue &&
@@ -389,13 +418,10 @@ export default function CodenamesDuetPage() {
     !gameState.isAIClueLoading &&
     !gameState.isAIGuessing;
 
-  // Can the human player click on a card?
   const isClickableForHuman = isHumanCurrentlyGuessingPhase && !gameState.humanClueGuessingConcluded && guessesLeftForThisClue > 0;
 
-  // Should the "End Guessing Voluntarily" button be shown?
   const canHumanVoluntarilyEndGuessing = isHumanCurrentlyGuessingPhase && !gameState.humanClueGuessingConcluded && guessesLeftForThisClue > 0;
   
-  // Should the "End Turn (Token Used)" button be shown (because human's guessing concluded by system)?
   const mustHumanConfirmTurnEnd = isHumanCurrentlyGuessingPhase && gameState.humanClueGuessingConcluded;
 
 
@@ -418,11 +444,11 @@ export default function CodenamesDuetPage() {
         isAIGuessing={gameState.isAIGuessing}
         onHumanClueSubmit={handleHumanClueSubmit}
         onGetAIClue={handleAIClueGeneration}
-        onEndTurn={() => endPlayerTurn(true)} // Always use token if turn ended via button
+        onEndTurn={() => endPlayerTurn(true)} 
         canHumanVoluntarilyEndGuessing={canHumanVoluntarilyEndGuessing}
         mustHumanConfirmTurnEnd={mustHumanConfirmTurnEnd}
-        guessesLeftForClue={guessesLeftForThisClue} // Still useful for display
-        humanClueGuessingConcluded={gameState.humanClueGuessingConcluded} // Pass this down for button text
+        guessesLeftForClue={guessesLeftForThisClue} 
+        humanClueGuessingConcluded={gameState.humanClueGuessingConcluded} 
       />
 
       <GameBoard
@@ -444,3 +470,4 @@ export default function CodenamesDuetPage() {
     </div>
   );
 }
+
