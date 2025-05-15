@@ -26,6 +26,7 @@ interface ControlsPanelProps {
   humanClueGuessingConcluded: boolean;
   inSuddenDeath: boolean;
   suddenDeathGuesser: GuesserType | null;
+  gameOver: boolean; // Added gameOver prop
 }
 
 const ControlsPanel: React.FC<ControlsPanelProps> = ({
@@ -47,6 +48,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   humanClueGuessingConcluded,
   inSuddenDeath,
   suddenDeathGuesser,
+  gameOver, // Destructure gameOver
 }) => {
   const [humanClueWord, setHumanClueWord] = React.useState('');
   const [humanClueCount, setHumanClueCount] = React.useState<number | ''>(1);
@@ -63,7 +65,10 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   let whoseTurnDisplay: string;
   let turnIcon;
 
-  if (inSuddenDeath) {
+  if (gameOver) {
+    whoseTurnDisplay = "Game Over";
+    turnIcon = <Info className="mr-2 h-5 w-5" />;
+  } else if (inSuddenDeath) {
     whoseTurnDisplay = "SUDDEN DEATH!";
     turnIcon = <AlertTriangle className="mr-2 h-5 w-5 text-destructive" />;
     if (suddenDeathGuesser === 'human') {
@@ -73,7 +78,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
         whoseTurnDisplay += " AI's Guess!";
         turnIcon = <BotIcon className="mr-2 h-5 w-5" />;
     } else {
-        whoseTurnDisplay += " Evaluating..."; // Or game over
+        whoseTurnDisplay += " Evaluating...";
     }
   } else if (isAIGuessing) {
     whoseTurnDisplay = "AI is Guessing Your Clue...";
@@ -89,8 +94,8 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
     turnIcon = currentTurn === 'human_clue' ? <User className="mr-2 h-5 w-5" /> : <BotIcon className="mr-2 h-5 w-5" />;
   }
   
-  const disableHumanClueInput = inSuddenDeath || isAIClueLoading || isAIGuessing || currentTurn !== 'human_clue' || !!activeClue;
-  const disableAICallButton = inSuddenDeath || isAIClueLoading || isAIGuessing || currentTurn !== 'ai_clue' || !!activeClue;
+  const disableHumanClueInput = gameOver || inSuddenDeath || isAIClueLoading || isAIGuessing || currentTurn !== 'human_clue' || !!activeClue;
+  const disableAICallButton = gameOver || inSuddenDeath || isAIClueLoading || isAIGuessing || currentTurn !== 'ai_clue' || !!activeClue;
 
 
   return (
@@ -129,7 +134,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
         </div>
 
 
-        {!inSuddenDeath && currentTurn === 'human_clue' && !activeClue && !isAIGuessing && (
+        {!gameOver && !inSuddenDeath && currentTurn === 'human_clue' && !activeClue && !isAIGuessing && (
           <form onSubmit={handleHumanSubmit} className="space-y-3 p-3 border rounded-md bg-background">
             <CardDescription className="text-center text-sm">Provide a one-word clue and a number.</CardDescription>
             <div className="space-y-1">
@@ -175,7 +180,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
           </form>
         )}
 
-        {!inSuddenDeath && currentTurn === 'ai_clue' && !activeClue && !isAIGuessing && (
+        {!gameOver && !inSuddenDeath && currentTurn === 'ai_clue' && !activeClue && !isAIGuessing && (
           <Button onClick={onGetAIClue} disabled={disableAICallButton} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
             {isAIClueLoading ? (
               <> <CircleDotDashed className="mr-2 h-4 w-4 animate-spin" /> AI is Thinking...</>
@@ -185,7 +190,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
           </Button>
         )}
 
-        {!inSuddenDeath && activeClue && !isAIGuessing && ( 
+        {!gameOver && !inSuddenDeath && activeClue && !isAIGuessing && ( 
           <Card className="bg-secondary p-4 rounded-md shadow-sm">
             <CardContent className="p-0 text-center">
               <p className="text-sm text-muted-foreground">
@@ -208,7 +213,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
           </Card>
         )}
 
-        {!inSuddenDeath && (canHumanVoluntarilyEndGuessing || mustHumanConfirmTurnEnd) && (
+        {!gameOver && !inSuddenDeath && (canHumanVoluntarilyEndGuessing || mustHumanConfirmTurnEnd) && (
             <Button onClick={onEndTurn} variant={mustHumanConfirmTurnEnd ? "destructive" : "outline"} className="w-full">
              {mustHumanConfirmTurnEnd ? <ShieldAlert className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
              {mustHumanConfirmTurnEnd ? "End Turn (Token Used)" : "End Guessing Voluntarily"}
@@ -216,8 +221,11 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
         )}
 
         {gameMessage && (
-          <div className={`p-3 border rounded-md text-center text-sm text-foreground/90 flex items-center justify-center ${inSuddenDeath ? 'bg-destructive/10 border-destructive' : 'bg-muted border-border'}`}>
-            {inSuddenDeath ? <AlertTriangle className="h-4 w-4 mr-2 shrink-0 text-destructive" /> : <Info className="h-4 w-4 mr-2 shrink-0 text-primary" />}
+          <div className={`p-3 border rounded-md text-center text-sm text-foreground/90 flex items-center justify-center ${inSuddenDeath ? 'bg-destructive/10 border-destructive' : gameOver && gameMessage.toLowerCase().includes("lose") ? 'bg-destructive/10 border-destructive' : gameOver && gameMessage.toLowerCase().includes("win") ? 'bg-primary/10 border-primary' : 'bg-muted border-border'}`}>
+            {inSuddenDeath ? <AlertTriangle className="h-4 w-4 mr-2 shrink-0 text-destructive" /> : 
+             gameOver && gameMessage.toLowerCase().includes("lose") ? <XCircle className="h-4 w-4 mr-2 shrink-0 text-destructive" /> : 
+             gameOver && gameMessage.toLowerCase().includes("win") ? <CheckCircle className="h-4 w-4 mr-2 shrink-0 text-green-500" /> : 
+             <Info className="h-4 w-4 mr-2 shrink-0 text-primary" />}
             <span>{gameMessage}</span>
           </div>
         )}
@@ -227,3 +235,4 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
 };
 
 export default ControlsPanel;
+
