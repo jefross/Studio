@@ -3,7 +3,7 @@ import type React from 'react';
 import type { WordCardData, CardType } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { ShieldCheck, Skull, CircleHelp, CheckIcon, AlertTriangleIcon } from 'lucide-react';
+import { ShieldCheck, Skull, CircleHelp, CheckIcon, AlertTriangleIcon, BotIcon } from 'lucide-react';
 
 interface WordCardProps {
   cardData: WordCardData;
@@ -46,9 +46,7 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
 
   const renderHumanKeyHintIcon = () => {
     if (!keyCardEntry || revealedState !== 'hidden') return null;
-
     const iconSize = "w-3.5 h-3.5 sm:w-4 sm:h-4";
-
     switch (keyCardEntry.human) {
       case 'GREEN':
         return <CheckIcon className={cn(iconSize, "text-green-600 dark:text-green-500")} title="Your Green Agent" />;
@@ -56,7 +54,21 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
         return <Skull className={cn(iconSize, "text-red-600 dark:text-red-500")} title="Your Assassin" />;
       case 'BYSTANDER':
       default:
-        return null; // No icon for Bystanders
+        return null;
+    }
+  };
+
+  const renderAIKeyHintIcon = () => {
+    if (!keyCardEntry || revealedState !== 'hidden') return null;
+    const iconSize = "w-3.5 h-3.5 sm:w-4 sm:h-4";
+    switch (keyCardEntry.ai) {
+      case 'GREEN':
+        return <BotIcon className={cn(iconSize, "text-blue-600 dark:text-blue-500")} title="AI's Green Agent" />;
+      case 'ASSASSIN':
+        return <AlertTriangleIcon className={cn(iconSize, "text-orange-600 dark:text-orange-500")} title="AI's Assassin" />;
+      case 'BYSTANDER':
+      default:
+        return null;
     }
   };
 
@@ -77,13 +89,23 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
       aria-pressed={revealedState !== 'hidden'}
       aria-disabled={!isClickable || revealedState !== 'hidden'}
     >
-      {/* Human Key Hint Icon */}
+      {/* Human Key Hint Icon (Top-Left) */}
       {revealedState === 'hidden' && keyCardEntry && (
         <div
           className="absolute top-1 left-1 sm:top-1.5 sm:left-1.5"
-          title={keyCardEntry.human === 'GREEN' ? "Your Agent" : keyCardEntry.human === 'ASSASSIN' ? "Your Assassin" : "Bystander"}
+          title={keyCardEntry.human === 'GREEN' ? "Your Agent" : keyCardEntry.human === 'ASSASSIN' ? "Your Assassin" : "Bystander (for you)"}
         >
           {renderHumanKeyHintIcon()}
+        </div>
+      )}
+
+      {/* AI Key Hint Icon (Top-Right) */}
+      {revealedState === 'hidden' && keyCardEntry && (
+        <div
+          className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5"
+          title={keyCardEntry.ai === 'GREEN' ? "AI's Agent" : keyCardEntry.ai === 'ASSASSIN' ? "AI's Assassin" : "Bystander (for AI)"}
+        >
+          {renderAIKeyHintIcon()}
         </div>
       )}
 
