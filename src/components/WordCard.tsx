@@ -2,7 +2,7 @@ import type React from 'react';
 import type { WordCardData, CardType } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { ShieldCheck, Skull, CircleHelp, CheckIcon } from 'lucide-react';
+import { ShieldCheck, Skull, CircleHelp, User, BotIcon } from 'lucide-react';
 
 interface WordCardProps {
   cardData: WordCardData;
@@ -16,63 +16,68 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
   const getCardClasses = () => {
     switch (revealedState) {
       case 'green':
-        return 'bg-primary text-primary-foreground'; 
+        return 'bg-primary/90 text-primary-foreground border-primary/50 shadow-[0_0_5px_1px_rgba(var(--primary),0.35)]'; 
       case 'assassin':
-        return 'bg-destructive text-destructive-foreground';
+        return 'bg-destructive/90 text-destructive-foreground border-destructive/50 shadow-[0_0_5px_1px_rgba(var(--destructive),0.35)]';
       case 'bystander_human_turn':
       case 'bystander_ai_turn':
-        return 'bg-bystander text-bystander-foreground'; 
+        return 'bg-bystander/90 text-bystander-foreground border-bystander/50 shadow-[0_0_5px_1px_rgba(var(--card),0.35)]'; 
       case 'hidden':
       default:
-        return 'bg-card hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors duration-150 text-card-foreground';
+        return 'bg-card hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors duration-150 text-card-foreground border-accent/30 hover:border-accent/60 shadow-sm';
     }
   };
 
   const renderRevealedIcon = () => {
-    const iconClass = "h-6 w-6 sm:h-8 sm:w-8";
+    const size = "h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7";
+    
     switch (revealedState) {
       case 'green':
-        return <ShieldCheck className={cn(iconClass, "text-primary-foreground")} />;
+        return <ShieldCheck className={cn(size, "text-primary-foreground")} />;
       case 'assassin':
-        return <Skull className={cn(iconClass, "text-destructive-foreground")} />;
+        return <Skull className={cn(size, "text-destructive-foreground")} />;
       case 'bystander_human_turn':
+        return <User className={cn(size, "text-bystander-foreground")} />;
       case 'bystander_ai_turn':
-        return <CircleHelp className={cn(iconClass, "text-bystander-foreground")} />;
+        return <BotIcon className={cn(size, "text-bystander-foreground")} />;
       default:
         return null;
     }
   };
 
-  const renderHumanKeyHintIcon = () => {
+  const renderHumanKeyHint = () => {
     if (!keyCardEntry || revealedState !== 'hidden') return null;
-    const iconSize = "w-5 h-5 sm:w-6 sm:h-6";
+    
     switch (keyCardEntry.human) {
       case 'GREEN':
         return (
-          <div className="rounded-full bg-primary/15 p-0.5 flex items-center justify-center">
-            <CheckIcon className={cn(iconSize, "text-[hsl(var(--primary))] stroke-[3]")} />
+          <div className="absolute top-0.5 left-0.5 sm:top-1 sm:left-1 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-primary/90 flex items-center justify-center"
+            title="Your Agent">
+            <User className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-primary-foreground" />
           </div>
         );
       case 'ASSASSIN':
-        return <Skull className={cn(iconSize, "text-[hsl(var(--destructive))] opacity-75")} />;
-      case 'BYSTANDER':
+        return (
+          <div className="absolute top-0.5 left-0.5 sm:top-1 sm:left-1 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-destructive/90 flex items-center justify-center"
+            title="Your Assassin">
+            <User className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-destructive-foreground" />
+          </div>
+        );
       default:
         return null;
     }
   };
-
-  // AI Key Hint Icon rendering is removed as per user request
 
   const showWordText = revealedState === 'hidden' || revealedState === 'bystander_human_turn' || revealedState === 'bystander_ai_turn';
 
   return (
     <Card
       className={cn(
-        'relative flex flex-col items-center justify-center p-1 sm:p-2 rounded-lg shadow-md select-none text-center',
-        'w-full h-[40px] sm:h-[60px] md:h-[80px]', // Reduced height by 20px at each breakpoint
+        'relative flex flex-col items-center justify-center p-1 sm:p-2 rounded-lg border',
+        'w-full h-full min-h-[40px] sm:min-h-[65px] md:min-h-[75px]',
         getCardClasses(),
-        isClickable ? 'cursor-pointer' : 'cursor-not-allowed opacity-90',
-        revealedState !== 'hidden' && 'cursor-default pointer-events-none'
+        isClickable ? 'cursor-pointer transform transition-transform duration-150 hover:-translate-y-1 active:translate-y-0' : 'cursor-not-allowed',
+        revealedState !== 'hidden' && 'cursor-default'
       )}
       onClick={() => revealedState === 'hidden' && isClickable && onCardClick(id)}
       aria-label={word}
@@ -81,24 +86,20 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
       aria-pressed={revealedState !== 'hidden'}
       aria-disabled={!isClickable || revealedState !== 'hidden'}
     >
-      {/* Human Key Hint Icon (Top-Left) */}
-      {revealedState === 'hidden' && keyCardEntry && (
-        <div
-          className="absolute top-0.5 left-0.5 sm:top-1 sm:left-1"
-          title={keyCardEntry.human === 'GREEN' ? "Your Agent" : keyCardEntry.human === 'ASSASSIN' ? "Your Assassin" : "Bystander (for you)"}
-        >
-          {renderHumanKeyHintIcon()}
-        </div>
-      )}
+      {/* Render the human key hint */}
+      {renderHumanKeyHint()}
 
-      {/* AI Key Hint Icon (Top-Right) - REMOVED */}
+      <CardContent className="p-0 flex flex-col items-center justify-center w-full h-full text-center">
+        {revealedState !== 'hidden' && (
+          <div className="mb-0.5">{renderRevealedIcon()}</div>
+        )}
 
-      <CardContent className="p-1 flex flex-col items-center justify-center w-full h-full overflow-hidden">
-        {revealedState !== 'hidden' && renderRevealedIcon()}
         {showWordText && (
           <span className={cn(
-            "font-medium text-xs sm:text-sm md:text-base leading-tight max-w-full",
-            "line-clamp-2 text-center" // Ensure text doesn't overflow by limiting to 2 lines
+            "font-medium text-center leading-tight",
+            word.length > 10 ? "text-xs md:text-sm" : "text-sm md:text-base",
+            "max-w-full px-1",
+            revealedState !== 'hidden' ? 'opacity-90' : ''
           )}>
             {word.toUpperCase()}
           </span>

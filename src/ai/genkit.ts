@@ -18,7 +18,8 @@ export const getAI = () => {
     try {
       const storedKey = window.localStorage.getItem('gemini-api-key');
       if (storedKey) {
-        apiKey = JSON.parse(storedKey);
+        // Use the stored key directly instead of parsing it as JSON
+        apiKey = storedKey;
       }
     } catch (error) {
       console.error('Error accessing localStorage:', error);

@@ -55,7 +55,8 @@ export default function CodenamesDuetPage() {
     const checkApiKey = () => {
       try {
         const storedKey = localStorage.getItem('gemini-api-key');
-        const hasKey = storedKey && JSON.parse(storedKey);
+        // Don't try to parse, just check if it exists and is not empty
+        const hasKey = !!storedKey && storedKey.trim() !== '';
         setApiKeyError(!hasKey);
         setHasCheckedApiKey(true);
       } catch (error) {
@@ -378,7 +379,8 @@ export default function CodenamesDuetPage() {
     // Check for API key before attempting to generate clue
     try {
       const storedKey = localStorage.getItem('gemini-api-key');
-      const hasKey = storedKey && JSON.parse(storedKey);
+      // Don't try to parse, just check if it exists and is not empty
+      const hasKey = !!storedKey && storedKey.trim() !== '';
       if (!hasKey) {
         setApiKeyError(true);
         toast({
@@ -798,16 +800,24 @@ export default function CodenamesDuetPage() {
 
 
   return (
-    <div className="flex flex-col min-h-screen p-4 max-w-7xl mx-auto">
-      <header className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold text-primary">Codenames Duet AI</h1>
-        <div className="flex items-center">
+    <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 flex flex-col p-4 md:p-6">
+      <header className="flex justify-between items-center mb-4 max-w-7xl w-full mx-auto">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-primary">Codenames Duet AI</h1>
+          <div className="hidden md:flex items-center space-x-2 bg-muted/50 rounded-full px-3 py-1.5 text-xs text-muted-foreground">
+            <span>Theme: {currentTheme.replace('-', ' ')}</span>
+            <span>•</span>
+            <span>Tokens: {difficultyTokens}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
           <ApiKeySettings />
           <Button
             onClick={() => resetGame(difficultyTokens, currentTheme)}
             variant="outline"
             size="icon"
             className="ml-2"
+            title="Restart Game"
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -820,96 +830,118 @@ export default function CodenamesDuetPage() {
             <AlertTriangle className="h-5 w-5 text-destructive mr-2" />
             <p className="text-destructive font-medium">Please set your Gemini API Key in settings to use AI features.</p>
           </div>
-          <p className="text-sm">You can get a free API key from <a href="https://aistudio.google.com/app/apikey" className="underline" target="_blank" rel="noopener noreferrer">Google AI Studio</a>.</p>
+          <p className="text-sm">You can get a free API key from <a href="https://aistudio.google.com/app/apikey" className="underline text-blue-600 hover:text-blue-800" target="_blank" rel="noopener noreferrer">Google AI Studio</a>.</p>
         </div>
       )}
-
-      <ControlsPanel
-        currentTurn={gameState.currentTurn}
-        timerTokens={gameState.timerTokens}
-        activeClue={gameState.activeClue}
-        gameMessage={gameState.gameMessage}
-        humanGreensLeft={countRemainingGreens(getPerspective(gameState.keyCardSetup, 'human'), gameState.revealedStates)}
-        aiGreensLeft={countRemainingGreens(getPerspective(gameState.keyCardSetup, 'ai'), gameState.revealedStates)}
-        totalGreensFound={gameState.totalGreensFound}
-        isAIClueLoading={gameState.isAIClueLoading}
-        isAIGuessing={gameState.isAIGuessing}
-        onHumanClueSubmit={handleHumanClueSubmit}
-        onGetAIClue={handleAIClueGeneration}
-        onEndTurn={() => endPlayerTurn(true)} 
-        canHumanVoluntarilyEndGuessing={canHumanVoluntarilyEndGuessing}
-        mustHumanConfirmTurnEnd={mustHumanConfirmTurnEnd}
-        guessesLeftForClue={guessesLeftForThisClue}
-        humanClueGuessingConcluded={gameState.humanClueGuessingConcluded}
-        inSuddenDeath={gameState.inSuddenDeath}
-        suddenDeathGuesser={gameState.suddenDeathGuesser}
-        gameOver={gameState.gameOver}
-      />
-
-      <GameBoard
-        cards={wordCardsData}
-        onCardClick={handleCardClick}
-        isClickableForHuman={isBoardClickableForHuman}
-      />
       
-      <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
-        <div className="flex items-center gap-2">
-            <Label htmlFor="difficulty-select" className="text-muted-foreground">Difficulty (Tokens):</Label>
-            <Select
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 max-w-7xl w-full mx-auto">
+        <div className="lg:w-1/3 order-2 lg:order-1">
+          <ControlsPanel
+            currentTurn={gameState.currentTurn}
+            timerTokens={gameState.timerTokens}
+            activeClue={gameState.activeClue}
+            gameMessage={gameState.gameMessage}
+            humanGreensLeft={countRemainingGreens(getPerspective(gameState.keyCardSetup, 'human'), gameState.revealedStates)}
+            aiGreensLeft={countRemainingGreens(getPerspective(gameState.keyCardSetup, 'ai'), gameState.revealedStates)}
+            totalGreensFound={gameState.totalGreensFound}
+            isAIClueLoading={gameState.isAIClueLoading}
+            isAIGuessing={gameState.isAIGuessing}
+            onHumanClueSubmit={handleHumanClueSubmit}
+            onGetAIClue={handleAIClueGeneration}
+            onEndTurn={() => endPlayerTurn(true)} 
+            canHumanVoluntarilyEndGuessing={canHumanVoluntarilyEndGuessing}
+            mustHumanConfirmTurnEnd={mustHumanConfirmTurnEnd}
+            guessesLeftForClue={guessesLeftForThisClue}
+            humanClueGuessingConcluded={gameState.humanClueGuessingConcluded}
+            inSuddenDeath={gameState.inSuddenDeath}
+            suddenDeathGuesser={gameState.suddenDeathGuesser}
+            gameOver={gameState.gameOver}
+          />
+
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-1 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="difficulty-select" className="text-sm font-medium">Difficulty (Tokens)</Label>
+              <Select
                 value={difficultyTokens.toString()}
                 onValueChange={(value) => {
-                    const numTokens = parseInt(value, 10);
-                    setDifficultyTokens(numTokens);
-                    resetGame(numTokens, currentTheme); 
+                  const numTokens = parseInt(value, 10);
+                  setDifficultyTokens(numTokens);
+                  resetGame(numTokens, currentTheme); 
                 }}
                 disabled={gameState.isAIClueLoading || gameState.isAIGuessing}
-            >
-                <SelectTrigger id="difficulty-select" className="w-[80px] bg-card">
-                    <SelectValue placeholder="Tokens" />
+              >
+                <SelectTrigger id="difficulty-select" className="w-full bg-card">
+                  <SelectValue placeholder="Tokens" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="9">9</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="11">11</SelectItem>
+                  <SelectItem value="9">Easy (9)</SelectItem>
+                  <SelectItem value="10">Medium (10)</SelectItem>
+                  <SelectItem value="11">Hard (11)</SelectItem>
                 </SelectContent>
-            </Select>
-        </div>
+              </Select>
+            </div>
 
-        <div className="flex items-center gap-2">
-            <Label htmlFor="theme-select" className="text-muted-foreground">Theme:</Label>
-            <Select
+            <div className="space-y-2">
+              <Label htmlFor="theme-select" className="text-sm font-medium">Theme</Label>
+              <Select
                 value={currentTheme}
                 onValueChange={(value: WordTheme) => {
-                    setCurrentTheme(value);
-                    resetGame(difficultyTokens, value);
+                  setCurrentTheme(value);
+                  resetGame(difficultyTokens, value);
                 }}
                 disabled={gameState.isAIClueLoading || gameState.isAIGuessing}
-            >
-                <SelectTrigger id="theme-select" className="w-[140px] bg-card">
-                    <SelectValue placeholder="Select Theme" />
+              >
+                <SelectTrigger id="theme-select" className="w-full bg-card">
+                  <SelectValue placeholder="Select Theme" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="simpsons">The Simpsons</SelectItem>
-                    <SelectItem value="marvel">Marvel</SelectItem>
-                    <SelectItem value="harry-potter">Harry Potter</SelectItem>
-                    <SelectItem value="disney">Disney</SelectItem>
-                    <SelectItem value="video-games">Video Games</SelectItem>
-                    <SelectItem value="star-wars">Star Wars</SelectItem>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="simpsons">The Simpsons</SelectItem>
+                  <SelectItem value="marvel">Marvel</SelectItem>
+                  <SelectItem value="harry-potter">Harry Potter</SelectItem>
+                  <SelectItem value="disney">Disney</SelectItem>
+                  <SelectItem value="video-games">Video Games</SelectItem>
+                  <SelectItem value="star-wars">Star Wars</SelectItem>
                 </SelectContent>
-            </Select>
+              </Select>
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={() => resetGame(difficultyTokens, currentTheme)}
+              className="bg-card h-10 mt-auto"
+              disabled={gameState.isAIClueLoading || gameState.isAIGuessing}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" /> Restart Game
+            </Button>
+          </div>
         </div>
 
-        <Button
-          variant="outline"
-          onClick={() => resetGame(difficultyTokens, currentTheme)}
-          className="bg-card"
-          disabled={gameState.isAIClueLoading || gameState.isAIGuessing} 
-        >
-          <RefreshCw className="mr-2 h-4 w-4" /> Restart Game
-        </Button>
-      </div>
+        <div className="lg:w-2/3 order-1 lg:order-2">
+          <GameBoard
+            cards={wordCardsData}
+            onCardClick={handleCardClick}
+            isClickableForHuman={isBoardClickableForHuman}
+          />
 
+          {/* Game Instructions */}
+          <div className="mt-4 p-3 bg-muted/40 rounded-lg text-sm text-muted-foreground">
+            <p className="font-medium mb-1">How to play:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Each player tries to find <strong>all 15 green agents</strong> while avoiding the <strong>assassins</strong>.</li>
+              <li>Take turns giving a one-word clue and a number indicating how many words it relates to.</li>
+              <li>Your partner (human or AI) makes guesses based on your clue.</li>
+              <li>Hit an assassin: instant loss! Hit a bystander: turn ends.</li>
+              {gameState.timerTokens === 0 && !gameState.inSuddenDeath && !gameState.gameOver && (
+                <li className="text-destructive font-medium">Timer tokens depleted! One wrong guess ends the game.</li>
+              )}
+              {gameState.inSuddenDeath && (
+                <li className="text-destructive font-medium">SUDDEN DEATH! Players must identify their partner's agents.</li>
+              )}
+            </ul>
+          </div>
+        </div>
+      </div>
 
       <GameEndModal
         isOpen={gameState.gameOver}
