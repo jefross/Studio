@@ -1,4 +1,3 @@
-
 import type React from 'react';
 import type { WordCardData } from '@/types';
 import WordCard from './WordCard';
@@ -11,15 +10,18 @@ interface GameBoardProps {
 
 const GameBoard: React.FC<GameBoardProps> = ({ cards, onCardClick, isClickableForHuman }) => {
   return (
-    <div className="grid grid-cols-5 gap-2 sm:gap-3 p-4 bg-secondary/50 rounded-lg shadow-inner max-w-3xl mx-auto">
-      {cards.map((card) => (
-        <WordCard
-          key={card.id}
-          cardData={card}
-          onCardClick={onCardClick}
-          isClickable={isClickableForHuman && card.revealedState === 'hidden'}
-        />
-      ))}
+    <div className="w-full max-w-3xl mx-auto">
+      <div className="grid grid-cols-5 gap-2 sm:gap-3 p-4 bg-secondary/50 rounded-lg shadow-inner">
+        {cards.map((card) => (
+          <div key={card.id} className="w-full">
+            <WordCard
+              cardData={card}
+              onCardClick={onCardClick}
+              isClickable={isClickableForHuman && card.revealedState === 'hidden'}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

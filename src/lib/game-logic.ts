@@ -1,6 +1,5 @@
-
 import type { KeyCardSetup, CardType, RevealedState, KeyCardEntry, GameState, PlayerTurn } from '@/types';
-import { WORD_LIST } from './words';
+import { getWordList, type WordTheme } from './words';
 import { TOTAL_WORDS_IN_GRID, INITIAL_TIMER_TOKENS, TOTAL_UNIQUE_GREEN_AGENTS } from '@/types';
 
 // Fisher-Yates shuffle algorithm
@@ -13,8 +12,9 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
-export function selectRandomWords(count: number): string[] {
-  const shuffledWords = shuffleArray(WORD_LIST);
+export function selectRandomWords(count: number, theme: WordTheme = 'standard'): string[] {
+  const wordList = getWordList(theme);
+  const shuffledWords = shuffleArray(wordList);
   return shuffledWords.slice(0, count);
 }
 
@@ -42,8 +42,8 @@ export function generateKeyCardSetup(): KeyCardSetup {
   return shuffleArray(assignments);
 }
 
-export function initializeGameState(initialTokens: number = INITIAL_TIMER_TOKENS): GameState {
-  const gridWords = selectRandomWords(TOTAL_WORDS_IN_GRID);
+export function initializeGameState(initialTokens: number = INITIAL_TIMER_TOKENS, theme: WordTheme = 'standard'): GameState {
+  const gridWords = selectRandomWords(TOTAL_WORDS_IN_GRID, theme);
   const keyCardSetup = generateKeyCardSetup();
   const revealedStates: RevealedState[] = Array(TOTAL_WORDS_IN_GRID).fill('hidden');
   
@@ -65,6 +65,7 @@ export function initializeGameState(initialTokens: number = INITIAL_TIMER_TOKENS
     humanClueGuessingConcluded: false,
     inSuddenDeath: false,
     suddenDeathGuesser: null,
+    theme: theme,
   };
 }
 

@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI agent that makes guesses in Codenames Duet.
@@ -8,8 +7,9 @@
  * - GenerateGuessOutput - The return type for the generateAiGuess function.
  */
 
-import {ai} from '@/ai/genkit';
+import {getAI, ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { WordTheme } from '@/lib/words';
 
 const GenerateGuessInputSchema = z.object({
   clueWord: z.string().describe('The clue word given by the human player. If "FIND_GREEN_AGENT_SUDDEN_DEATH", it means AI is in sudden death and should pick one word it believes is a Green agent for its HUMAN PARTNER.'),
@@ -27,6 +27,10 @@ const GenerateGuessInputSchema = z.object({
   revealedWords: z
     .array(z.string())
     .describe("A list of words that have already been revealed on the board."),
+  theme: z
+    .enum(['standard', 'simpsons', 'marvel', 'harry-potter', 'disney', 'video-games', 'star-wars'])
+    .describe('The theme of the word set being used in the game.')
+    .optional()
 });
 export type GenerateGuessInput = z.infer<typeof GenerateGuessInputSchema>;
 
@@ -46,10 +50,27 @@ export type GenerateGuessOutput = z.infer<typeof GenerateGuessOutputSchema>;
 export async function generateAiGuess(
   input: GenerateGuessInput
 ): Promise<GenerateGuessOutput> {
-  return generateAiGuessFlow(input);
+  try {
+    // Get the AI instance with the current API key
+    const aiInstance = getAI();
+    return generateAiGuessFlow(input, aiInstance);
+  } catch (error: any) {
+    console.error('Error generating AI guess:', error);
+    
+    // If the error is about missing API key, pass it through
+    if (error.message?.includes('API key')) {
+      throw error;
+    }
+    
+    // Otherwise provide a fallback response
+    return {
+      guessedWords: [],
+      reasoning: `Failed to generate guess: ${error.message}`
+    };
+  }
 }
 
-const generateGuessPrompt = ai.definePrompt({
+const generateGuessPrompt = (ai: any) => ai.definePrompt({
   name: 'generateAiGuessPrompt',
   input: {schema: z.object({ 
     ...GenerateGuessInputSchema.shape,
@@ -57,6 +78,21 @@ const generateGuessPrompt = ai.definePrompt({
   })},
   output: {schema: GenerateGuessOutputSchema},
   prompt: `You are an AI playing Codenames Duet. Your goal is to help your team find all 15 unique agents.
+
+{{#if theme}}
+The game is using a {{theme}} themed word set. All words on the board are related to this theme.
+
+Theme information:
+- simpsons theme: Words related to The Simpsons TV show, including characters, locations, catchphrases, and other elements from the series.
+- marvel theme: Words related to the Marvel universe, including characters, places, objects, and concepts from Marvel comics and movies.
+- harry-potter theme: Words related to the Harry Potter universe, including characters, spells, locations, and objects from the book and movie series.
+- standard theme: A variety of general words not tied to any specific theme.
+- disney theme: Words related to Disney animated films and characters, including Disney princesses, sidekicks, villains, and iconic Disney movie elements.
+- video-games theme: Words related to video games, including popular characters, franchises, terminology, platforms, companies, and gaming concepts.
+- star-wars theme: Words related to the Star Wars universe, including characters, planets, vehicles, terminology, and concepts from the franchise.
+
+You should consider the {{theme}} theme when interpreting clues and making guesses.
+{{/if}}
 
 {{#if isSuddenDeathScenario}}
 You are in a SUDDEN DEATH round. No more clues will be given by your human partner.
@@ -124,47 +160,57 @@ Respond with the 'guessedWords' array and your 'reasoning'. If you think no word
 `,
 });
 
-const generateAiGuessFlow = ai.defineFlow(
-  {
-    name: 'generateAiGuessFlow',
-    inputSchema: GenerateGuessInputSchema, // Flow input remains the same
-    outputSchema: GenerateGuessOutputSchema,
-  },
-  async (input) => {
-    const unrevealedGrid = input.gridWords.filter(w => !input.revealedWords.includes(w));
-    
-    const baseInputForPrompt = {
-      ...input,
-      // Filter AI's own green/assassin words to only those still on the board and unrevealed.
-      // This is for AI's self-awareness.
-      aiGreenWords: input.aiGreenWords.filter(w => unrevealedGrid.includes(w)),
-      aiAssassinWords: input.aiAssassinWords.filter(w => unrevealedGrid.includes(w)),
-    };
-
-    const enrichedInputForPrompt = {
-        ...baseInputForPrompt,
-        isSuddenDeathScenario: baseInputForPrompt.clueWord === "FIND_GREEN_AGENT_SUDDEN_DEATH",
-    };
-
-    const {output} = await generateGuessPrompt(enrichedInputForPrompt);
-    
-    if (!output) {
-      console.error('AI guess prompt did not return a valid output.');
-      return {
-        guessedWords: [],
-        reasoning: 'AI model failed to generate a structured response, so it passes the turn.',
-      };
-    }
-    
-    if (output.guessedWords) {
-        // Filter AI's guesses to ensure they are valid (on grid, not revealed)
-        output.guessedWords = output.guessedWords.filter(gw => input.gridWords.includes(gw) && !input.revealedWords.includes(gw));
-        // In Sudden Death, AI should only guess one word.
-        if (enrichedInputForPrompt.isSuddenDeathScenario && output.guessedWords.length > 1) {
-            output.guessedWords = output.guessedWords.slice(0,1);
-        }
-    }
-    return output;
+const generateAiGuessFlow = (input: GenerateGuessInput, ai: any) => {
+  // Handle the case where ai might be a mock for SSR
+  if (ai.mock) {
+    throw new Error('AI service is not available. Please check your API key settings.');
   }
-);
+  
+  const flow = ai.defineFlow(
+    {
+      name: 'generateAiGuessFlow',
+      inputSchema: GenerateGuessInputSchema, // Flow input remains the same
+      outputSchema: GenerateGuessOutputSchema,
+    },
+    async (flowInput: GenerateGuessInput) => {
+      const unrevealedGrid = flowInput.gridWords.filter(w => !flowInput.revealedWords.includes(w));
+      
+      const baseInputForPrompt = {
+        ...flowInput,
+        // Filter AI's own green/assassin words to only those still on the board and unrevealed.
+        // This is for AI's self-awareness.
+        aiGreenWords: flowInput.aiGreenWords.filter(w => unrevealedGrid.includes(w)),
+        aiAssassinWords: flowInput.aiAssassinWords.filter(w => unrevealedGrid.includes(w)),
+      };
+
+      const enrichedInputForPrompt = {
+          ...baseInputForPrompt,
+          isSuddenDeathScenario: baseInputForPrompt.clueWord === "FIND_GREEN_AGENT_SUDDEN_DEATH",
+      };
+
+      const prompt = generateGuessPrompt(ai);
+      const {output} = await prompt(enrichedInputForPrompt);
+      
+      if (!output) {
+        console.error('AI guess prompt did not return a valid output.');
+        return {
+          guessedWords: [],
+          reasoning: 'AI model failed to generate a structured response, so it passes the turn.',
+        };
+      }
+      
+      if (output.guessedWords) {
+          // Filter AI's guesses to ensure they are valid (on grid, not revealed)
+          output.guessedWords = output.guessedWords.filter((gw: string) => flowInput.gridWords.includes(gw) && !flowInput.revealedWords.includes(gw));
+          // In Sudden Death, AI should only guess one word.
+          if (enrichedInputForPrompt.isSuddenDeathScenario && output.guessedWords.length > 1) {
+              output.guessedWords = output.guessedWords.slice(0,1);
+          }
+      }
+      return output;
+    }
+  );
+  
+  return flow(input);
+};
 

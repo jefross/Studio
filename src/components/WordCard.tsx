@@ -1,4 +1,3 @@
-
 import type React from 'react';
 import type { WordCardData, CardType } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -46,12 +45,16 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
 
   const renderHumanKeyHintIcon = () => {
     if (!keyCardEntry || revealedState !== 'hidden') return null;
-    const iconSize = "w-3.5 h-3.5 sm:w-4 sm:h-4";
+    const iconSize = "w-5 h-5 sm:w-6 sm:h-6";
     switch (keyCardEntry.human) {
       case 'GREEN':
-        return <CheckIcon className={cn(iconSize, "text-[hsl(var(--primary))] opacity-75")} title="Your Green Agent" />;
+        return (
+          <div className="rounded-full bg-primary/15 p-0.5 flex items-center justify-center">
+            <CheckIcon className={cn(iconSize, "text-[hsl(var(--primary))] stroke-[3]")} />
+          </div>
+        );
       case 'ASSASSIN':
-        return <Skull className={cn(iconSize, "text-[hsl(var(--destructive))] opacity-75")} title="Your Assassin" />;
+        return <Skull className={cn(iconSize, "text-[hsl(var(--destructive))] opacity-75")} />;
       case 'BYSTANDER':
       default:
         return null;
@@ -65,7 +68,8 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
   return (
     <Card
       className={cn(
-        'relative flex flex-col items-center justify-center aspect-[4/3] sm:aspect-video p-1 sm:p-2 rounded-lg shadow-md select-none text-center',
+        'relative flex flex-col items-center justify-center p-1 sm:p-2 rounded-lg shadow-md select-none text-center',
+        'w-full h-[40px] sm:h-[60px] md:h-[80px]', // Reduced height by 20px at each breakpoint
         getCardClasses(),
         isClickable ? 'cursor-pointer' : 'cursor-not-allowed opacity-90',
         revealedState !== 'hidden' && 'cursor-default pointer-events-none'
@@ -80,7 +84,7 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
       {/* Human Key Hint Icon (Top-Left) */}
       {revealedState === 'hidden' && keyCardEntry && (
         <div
-          className="absolute top-1 left-1 sm:top-1.5 sm:left-1.5"
+          className="absolute top-0.5 left-0.5 sm:top-1 sm:left-1"
           title={keyCardEntry.human === 'GREEN' ? "Your Agent" : keyCardEntry.human === 'ASSASSIN' ? "Your Assassin" : "Bystander (for you)"}
         >
           {renderHumanKeyHintIcon()}
@@ -89,11 +93,12 @@ const WordCard: React.FC<WordCardProps> = ({ cardData, onCardClick, isClickable 
 
       {/* AI Key Hint Icon (Top-Right) - REMOVED */}
 
-      <CardContent className="p-1 flex flex-col items-center justify-center w-full h-full">
+      <CardContent className="p-1 flex flex-col items-center justify-center w-full h-full overflow-hidden">
         {revealedState !== 'hidden' && renderRevealedIcon()}
         {showWordText && (
           <span className={cn(
-            "font-medium text-xs sm:text-sm md:text-base break-words leading-tight",
+            "font-medium text-xs sm:text-sm md:text-base leading-tight max-w-full",
+            "line-clamp-2 text-center" // Ensure text doesn't overflow by limiting to 2 lines
           )}>
             {word.toUpperCase()}
           </span>

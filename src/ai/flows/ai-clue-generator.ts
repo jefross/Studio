@@ -2,8 +2,9 @@
 
 'use server';
 
-import {ai} from '@/ai/genkit';
+import {getAI, ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { WordTheme } from '@/lib/words';
 
 /**
  * @fileOverview An AI agent that generates clues for Codenames Duet.
@@ -25,6 +26,9 @@ const GenerateClueInputSchema = z.object({
     .array(z.string())
     .describe('The words that are assassins for the clue receiver.'),
   timerTokens: z.number().describe('The number of timer tokens remaining.'),
+  theme: z
+    .enum(['standard', 'simpsons', 'marvel', 'harry-potter', 'disney', 'video-games', 'star-wars'])
+    .describe('The theme of the word set being used in the game.')
 });
 export type GenerateClueInput = z.infer<typeof GenerateClueInputSchema>;
 
@@ -36,14 +40,47 @@ const GenerateClueOutputSchema = z.object({
 export type GenerateClueOutput = z.infer<typeof GenerateClueOutputSchema>;
 
 export async function generateClue(input: GenerateClueInput): Promise<GenerateClueOutput> {
-  return generateClueFlow(input);
+  try {
+    // Get the AI instance with the current API key
+    const aiInstance = getAI();
+    return generateClueFlow(input, aiInstance);
+  } catch (error: any) {
+    console.error('Error generating clue:', error);
+    
+    // If the error is about missing API key, pass it through
+    if (error.message?.includes('API key')) {
+      throw error;
+    }
+    
+    // Otherwise provide a fallback response
+    return {
+      clueWord: "ERROR",
+      clueNumber: 0,
+      reasoning: `Failed to generate clue: ${error.message}`
+    };
+  }
 }
 
-const generateCluePrompt = ai.definePrompt({
+const generateCluePrompt = (ai: any) => ai.definePrompt({
   name: 'generateCluePrompt',
   input: {schema: GenerateClueInputSchema},
   output: {schema: GenerateClueOutputSchema},
   prompt: `You are an expert Codenames Duet player. Your goal is to provide a clue that will help your partner guess the green words on their key card, while avoiding the assassin words. You are provided with the current board state, the green words, the assassin words, and the number of timer tokens remaining.
+
+{{#if theme}}
+The game is using a {{theme}} themed word set. All words on the board are related to this theme.
+
+Theme information:
+- simpsons theme: Words related to The Simpsons TV show, including characters, locations, catchphrases, and other elements from the series.
+- marvel theme: Words related to the Marvel universe, including characters, places, objects, and concepts from Marvel comics and movies.
+- harry-potter theme: Words related to the Harry Potter universe, including characters, spells, locations, and objects from the book and movie series.
+- standard theme: A variety of general words not tied to any specific theme.
+- disney theme: Words related to Disney animated films and characters, including Disney princesses, sidekicks, villains, and iconic Disney movie elements.
+- video-games theme: Words related to video games, including popular characters, franchises, terminology, platforms, companies, and gaming concepts.
+- star-wars theme: Words related to the Star Wars universe, including characters, planets, vehicles, terminology, and concepts from the franchise.
+
+Your clue should be appropriate for the {{theme}} theme.
+{{/if}}
 
 Here is the board:
 {{#each grid}}
@@ -67,14 +104,24 @@ Generate a clue word and a number. The clue word must not be any word visible on
 Respond with the clue word, the number, and your reasoning.`,
 });
 
-const generateClueFlow = ai.defineFlow(
-  {
-    name: 'generateClueFlow',
-    inputSchema: GenerateClueInputSchema,
-    outputSchema: GenerateClueOutputSchema,
-  },
-  async input => {
-    const {output} = await generateCluePrompt(input);
-    return output!;
+const generateClueFlow = (input: GenerateClueInput, ai: any) => {
+  // Handle the case where ai might be a mock for SSR
+  if (ai.mock) {
+    throw new Error('AI service is not available. Please check your API key settings.');
   }
-);
+  
+  const flow = ai.defineFlow(
+    {
+      name: 'generateClueFlow',
+      inputSchema: GenerateClueInputSchema,
+      outputSchema: GenerateClueOutputSchema,
+    },
+    async (flowInput: GenerateClueInput) => {
+      const prompt = generateCluePrompt(ai);
+      const {output} = await prompt(flowInput);
+      return output!;
+    }
+  );
+  
+  return flow(input);
+};

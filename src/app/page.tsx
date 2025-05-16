@@ -1,4 +1,3 @@
-
 "use client";
 
 import type React from 'react';
@@ -6,6 +5,7 @@ import { useState, useEffect, useCallback }from 'react';
 import GameBoard from '@/components/GameBoard';
 import ControlsPanel from '@/components/ControlsPanel';
 import GameEndModal from '@/components/GameEndModal';
+import ApiKeySettings from '@/components/ApiKeySettings';
 import { initializeGameState, getPerspective, countRemainingGreens } from '@/lib/game-logic';
 import type { GameState, WordCardData, Clue, PlayerTurn, CardType, RevealedState, GuesserType } from '@/types';
 import { TOTAL_UNIQUE_GREEN_AGENTS, INITIAL_TIMER_TOKENS } from '@/types';
@@ -13,8 +13,9 @@ import { generateClue as generateAIClue } from '@/ai/flows/ai-clue-generator';
 import { generateAiGuess } from '@/ai/flows/ai-guess-generator';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import type { WordTheme } from '@/lib/words';
 import {
   Select,
   SelectContent,
@@ -44,17 +45,40 @@ interface SuddenDeathRevealResult {
 export default function CodenamesDuetPage() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [difficultyTokens, setDifficultyTokens] = useState<number>(INITIAL_TIMER_TOKENS);
+  const [currentTheme, setCurrentTheme] = useState<WordTheme>('standard');
+  const [apiKeyError, setApiKeyError] = useState<boolean>(false);
+  const [hasCheckedApiKey, setHasCheckedApiKey] = useState<boolean>(false);
   const { toast } = useToast();
 
-  const resetGame = useCallback((tokens: number = difficultyTokens) => {
-    setGameState(initializeGameState(tokens));
-  }, [difficultyTokens]);
+  // Check if API key exists in local storage on component mount
+  useEffect(() => {
+    const checkApiKey = () => {
+      try {
+        const storedKey = localStorage.getItem('gemini-api-key');
+        const hasKey = storedKey && JSON.parse(storedKey);
+        setApiKeyError(!hasKey);
+        setHasCheckedApiKey(true);
+      } catch (error) {
+        console.error('Error checking for API key:', error);
+        setApiKeyError(true);
+        setHasCheckedApiKey(true);
+      }
+    };
+    
+    // Delay checking until after hydration is complete
+    const timer = setTimeout(checkApiKey, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const resetGame = useCallback((tokens: number = difficultyTokens, theme: WordTheme = currentTheme) => {
+    setGameState(initializeGameState(tokens, theme));
+  }, [difficultyTokens, currentTheme]);
 
   useEffect(() => {
     if (!gameState) {
-      resetGame(difficultyTokens);
+      resetGame(difficultyTokens, currentTheme);
     }
-  }, [gameState, resetGame, difficultyTokens]);
+  }, [gameState, resetGame, difficultyTokens, currentTheme]);
 
 
   const endPlayerTurn = useCallback((useTimerToken: boolean) => {
@@ -62,30 +86,30 @@ export default function CodenamesDuetPage() {
       if (!prev || prev.gameOver) return prev; 
 
       const currentTotalGreensFound = prev.revealedStates.filter(s => s === 'green').length;
-      let gameShouldBeOver = prev.gameOver;
+      const gameShouldBeOver = prev.gameOver; // Start with current state
+      let shouldEndGame = false; // New variable to track if game should end
       let finalMessage = prev.gameMessage;
       let enteringSuddenDeath = prev.inSuddenDeath;
-
 
       let newTimerTokens = prev.timerTokens;
       if (!prev.inSuddenDeath && useTimerToken) { 
           newTimerTokens = Math.max(0, prev.timerTokens - 1);
       }
       
-      if (currentTotalGreensFound === TOTAL_UNIQUE_GREEN_AGENTS && !gameShouldBeOver) {
-        gameShouldBeOver = true;
+      if (currentTotalGreensFound === TOTAL_UNIQUE_GREEN_AGENTS && !shouldEndGame) {
+        shouldEndGame = true;
         finalMessage = 'All 15 agents contacted! You win!';
-      } else if (newTimerTokens <= 0 && !prev.inSuddenDeath && !gameShouldBeOver) { 
+      } else if (newTimerTokens <= 0 && !prev.inSuddenDeath && !shouldEndGame) { 
         if (!prev.revealedStates.includes('assassin')) {
             enteringSuddenDeath = true;
             finalMessage = "Timer exhausted! Entering Sudden Death! Players now try to REVEAL THEIR PARTNER'S agents.";
-        } else if (!gameShouldBeOver) { 
-            gameShouldBeOver = true;
+        } else if (!shouldEndGame) { 
+            shouldEndGame = true;
             // finalMessage remains as assassin hit message
         }
       }
 
-      if (gameShouldBeOver && !enteringSuddenDeath) {
+      if (shouldEndGame && !enteringSuddenDeath) {
         return {
             ...prev,
             gameOver: true,
@@ -126,7 +150,7 @@ export default function CodenamesDuetPage() {
                 suddenDeathGuesser: null,
              }
         }
-         if (!nextSuddenDeathGuesser && currentTotalGreensFound === TOTAL_UNIQUE_GREEN_AGENTS) { // Should be caught by gameShouldBeOver above
+         if (!nextSuddenDeathGuesser && currentTotalGreensFound === TOTAL_UNIQUE_GREEN_AGENTS) { // Should be caught by shouldEndGame check above
              return { 
                 ...prev,
                 gameOver: true,
@@ -349,70 +373,90 @@ export default function CodenamesDuetPage() {
   }, [setGameState, getPerspective]);
 
   const handleAIClueGeneration = useCallback(async () => {
-    if (!gameState || gameState.gameOver || gameState.inSuddenDeath || gameState.isAIClueLoading) {
-      toast({ title: "Game Info", description: "Cannot generate AI clue at this time.", variant: "default" });
-      return;
-    }
-    
-    setGameState(prev => prev ? { ...prev, isAIClueLoading: true, gameMessage: "AI is thinking of a clue..." } : null);
+    if (!gameState || gameState.gameOver || gameState.currentTurn !== 'ai_clue' || gameState.activeClue) return;
 
-    const currentGameStateForAI = gameState; 
-
-    if (!currentGameStateForAI) { 
-      toast({ title: "AI Error", description: "Failed to get current game state for AI clue.", variant: "destructive" });
-      setGameState(prev => prev ? { ...prev, isAIClueLoading: false } : null);
-      return;
-    }
-
+    // Check for API key before attempting to generate clue
     try {
-      const aiPerspectiveKey = getPerspective(currentGameStateForAI.keyCardSetup, 'ai');
-      const humanPerspectiveKey = getPerspective(currentGameStateForAI.keyCardSetup, 'human'); 
-
-      const unrevealedAIGreens = currentGameStateForAI.gridWords.filter((word, i) =>
-        aiPerspectiveKey[i] === 'GREEN' && currentGameStateForAI.revealedStates[i] === 'hidden'
-      );
-      const humanAssassinsOnBoard = currentGameStateForAI.gridWords.filter((word, i) => 
-        humanPerspectiveKey[i] === 'ASSASSIN' && currentGameStateForAI.revealedStates[i] === 'hidden'
-      );
-
-      if (unrevealedAIGreens.length === 0) {
-        toast({ title: "AI Info", description: "AI has no more green words to give clues for. AI passes clue giving." });
-         setGameState(prev => prev ? {
-            ...prev,
-            isAIClueLoading: false,
-            activeClue: null, 
-            guessesMadeForClue: 0,
-            humanClueGuessingConcluded: false, 
-        } : null);
-        if (currentGameStateForAI && !currentGameStateForAI.gameOver) {
-            endPlayerTurn(false); 
-        }
+      const storedKey = localStorage.getItem('gemini-api-key');
+      const hasKey = storedKey && JSON.parse(storedKey);
+      if (!hasKey) {
+        setApiKeyError(true);
+        toast({
+          title: "API Key Required",
+          description: "Please set your Gemini API key in settings to use AI features.",
+          variant: "destructive"
+        });
         return;
       }
+    } catch (error) {
+      console.error('Error checking for API key:', error);
+      setApiKeyError(true);
+      return;
+    }
 
-      const aiClueResponse = await generateAIClue({
-        grid: currentGameStateForAI.gridWords,
-        greenWords: unrevealedAIGreens, 
-        assassinWords: humanAssassinsOnBoard, 
-        timerTokens: currentGameStateForAI.timerTokens,
+    setGameState(prev => {
+      if (!prev) return prev;
+      return { ...prev, isAIClueLoading: true };
+    });
+
+    try {
+      const aiPerspective = getPerspective(gameState.keyCardSetup, 'ai');
+      const gridWords = gameState.gridWords;
+      
+      // Get green and assassin words for AI's clue giving
+      const greenWords = gameState.gridWords.filter((word, idx) => {
+          return gameState.revealedStates[idx] === 'hidden' && aiPerspective[idx] === 'GREEN';
+      });
+      
+      const assassinWords = gameState.gridWords.filter((word, idx) => {
+          return gameState.revealedStates[idx] === 'hidden' && aiPerspective[idx] === 'ASSASSIN';
+      });
+      
+      const clue = await generateAIClue({
+        grid: gridWords,
+        greenWords,
+        assassinWords,
+        timerTokens: gameState.timerTokens,
+        theme: currentTheme
       });
 
-      setGameState(prev => prev ? {
-        ...prev,
-        activeClue: { word: aiClueResponse.clueWord, count: aiClueResponse.clueNumber },
-        isAIClueLoading: false,
-        gameMessage: `AI's Clue: ${aiClueResponse.clueWord.toUpperCase()} for ${aiClueResponse.clueNumber}. Your turn to make selections.`,
-        guessesMadeForClue: 0,
-        humanClueGuessingConcluded: false,
-      } : null);
-      toast({ title: "AI Clue", description: `${aiClueResponse.clueWord.toUpperCase()} - ${aiClueResponse.clueNumber}.` });
-
-    } catch (error) {
-      console.error("Error generating AI clue:", error);
-      toast({ title: "AI Error", description: "Could not generate AI clue.", variant: "destructive" });
-      setGameState(prev => prev ? { ...prev, isAIClueLoading: false, gameMessage: "Error getting AI clue. Try AI again or if issue persists, restart." } : null);
+      setGameState(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          isAIClueLoading: false,
+          activeClue: {
+            word: clue.clueWord,
+            count: clue.clueNumber
+          },
+          gameMessage: `AI gave the clue: ${clue.clueWord.toUpperCase()} ${clue.clueNumber}. Click on words to try guessing!`,
+          aiReasoning: clue.reasoning
+        };
+      });
+      
+      setApiKeyError(false);
+    } catch (error: any) {
+      console.error('Failed to generate AI clue:', error);
+      let errorMessage = 'Failed to generate AI clue. Please try again.';
+      
+      // Check if it's an API key error
+      if (error.message?.includes('No Gemini API key found') || error.message?.includes('API key')) {
+        setApiKeyError(true);
+        errorMessage = 'No valid Gemini API key found. Please add your API key in settings.';
+      }
+      
+      setGameState(prev => {
+        if (!prev) return prev;
+        return { ...prev, isAIClueLoading: false, gameMessage: errorMessage };
+      });
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
-  }, [gameState, toast, setGameState, endPlayerTurn, getPerspective]);
+  }, [gameState, currentTheme, toast]);
 
 
   const handleAIGuesses = useCallback(async (clueForAI?: Clue) => {
@@ -438,6 +482,16 @@ export default function CodenamesDuetPage() {
         gameMessage: prevGS.inSuddenDeath ? "AI is selecting for its HUMAN PARTNER..." : `AI is considering selections for your clue: ${clueForAI?.word.toUpperCase()} ${clueForAI?.count}...`
       }
     });
+    
+    // Add a toast notification when the AI is making guesses with a longer duration
+    toast({ 
+      title: "AI Analyzing", 
+      description: currentProcessingGameState.inSuddenDeath 
+        ? "The AI is analyzing the board for Sudden Death selections..." 
+        : `The AI is analyzing your clue: ${clueForAI?.word.toUpperCase()} ${clueForAI?.count}...`,
+      variant: "thinking",
+      duration: 15000 // 15 seconds
+    });
         
     const aiPerspectiveKey = getPerspective(currentProcessingGameState.keyCardSetup, 'ai');
     const aiUnrevealedAssassinWords = currentProcessingGameState.gridWords.filter((word, i) => aiPerspectiveKey[i] === 'ASSASSIN' && currentProcessingGameState.revealedStates[i] === 'hidden');
@@ -454,6 +508,7 @@ export default function CodenamesDuetPage() {
         aiGreenWords: aiOwnUnrevealedGreenWords, 
         aiAssassinWords: aiUnrevealedAssassinWords, 
         revealedWords: revealedWordsList,
+        theme: currentProcessingGameState.theme
       } : {
         clueWord: clueForAI!.word, 
         clueNumber: clueForAI!.count,
@@ -461,6 +516,7 @@ export default function CodenamesDuetPage() {
         aiGreenWords: aiOwnUnrevealedGreenWords, 
         aiAssassinWords: aiUnrevealedAssassinWords, 
         revealedWords: revealedWordsList,
+        theme: currentProcessingGameState.theme
       };
 
       const aiGuessResponse = await generateAiGuess(guessInput);
@@ -553,10 +609,10 @@ export default function CodenamesDuetPage() {
       setGameState(prev => {
           if (!prev) {
             return {
-                ...(gameState || initializeGameState(difficultyTokens)), // Fallback to a fresh state if prev is somehow null
-                gridWords: (gameState || initializeGameState(difficultyTokens)).gridWords,
-                keyCardSetup: (gameState || initializeGameState(difficultyTokens)).keyCardSetup,
-                revealedStates: (gameState || initializeGameState(difficultyTokens)).revealedStates,
+                ...(gameState || initializeGameState(difficultyTokens, currentTheme)), // Fallback to a fresh state if prev is somehow null
+                gridWords: (gameState || initializeGameState(difficultyTokens, currentTheme)).gridWords,
+                keyCardSetup: (gameState || initializeGameState(difficultyTokens, currentTheme)).keyCardSetup,
+                revealedStates: (gameState || initializeGameState(difficultyTokens, currentTheme)).revealedStates,
                 gameOver: true,
                 gameMessage: "Critical error: Game state was lost during AI processing.",
                 isAIGuessing: false,
@@ -567,16 +623,29 @@ export default function CodenamesDuetPage() {
           }
           let updatedState = { ...prev, isAIGuessing: false };
           if (wasInSuddenDeathOnError && !gameWasOverOnError) {
-            const aiPartnerStillHasGreensForHumanToTarget = countRemainingGreens(getPerspective(updatedState.keyCardSetup, 'ai'), updatedState.revealedStates) > 0;
+            const aiPartnerStillHasGreensForHumanToTarget = countRemainingGreens(
+              getPerspective(updatedState.keyCardSetup, 'ai'), 
+              updatedState.revealedStates
+            ) > 0;
+
             if (aiPartnerStillHasGreensForHumanToTarget) { 
-                updatedState.suddenDeathGuesser = 'human';
-                updatedState.gameMessage = "AI error in Sudden Death. Your turn to select for the AI partner.";
+                updatedState = {
+                  ...updatedState,
+                  suddenDeathGuesser: 'human',
+                  gameMessage: "AI error in Sudden Death. Your turn to select for the AI partner."
+                };
             } else { 
-                updatedState.gameOver = true;
-                updatedState.gameMessage = "AI error in Sudden Death, and AI has no agents left for Human to select. You lose.";
+                updatedState = {
+                  ...updatedState,
+                  gameOver: true,
+                  gameMessage: "AI error in Sudden Death, and AI has no agents left for Human to select. You lose."
+                };
             }
           } else if (!gameWasOverOnError) { 
-            updatedState.gameMessage = "AI error during selections. AI passes its turn.";
+            updatedState = {
+              ...updatedState,
+              gameMessage: "AI error during selections. AI passes its turn."
+            };
           }
           return updatedState;
       });
@@ -585,7 +654,7 @@ export default function CodenamesDuetPage() {
           endPlayerTurn(true);
       }
     }
-  }, [gameState, toast, processReveal, processSuddenDeathReveal, endPlayerTurn, setGameState, getPerspective, difficultyTokens]);
+  }, [gameState, toast, processReveal, processSuddenDeathReveal, endPlayerTurn, setGameState, getPerspective, difficultyTokens, currentTheme]);
 
 
   const handleHumanClueSubmit = useCallback((clue: Clue) => {
@@ -680,11 +749,20 @@ export default function CodenamesDuetPage() {
   }, [gameState?.revealedStates, gameState?.gameOver, gameState?.inSuddenDeath, setGameState]);
 
 
+  if (!hasCheckedApiKey) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="mt-4 text-muted-foreground">Initializing application...</p>
+      </div>
+    );
+  }
+
   if (!gameState) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 space-y-6">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground">Loading game...</p>
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="mt-4 text-muted-foreground">Initializing game...</p>
       </div>
     );
   }
@@ -720,11 +798,31 @@ export default function CodenamesDuetPage() {
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 space-y-6">
-      <header className="text-center space-y-2 py-4">
-        <h1 className="text-4xl font-bold text-primary">Codenames Duet AI</h1>
-        <p className="text-muted-foreground">A cooperative word game of secret agents and covert ops.</p>
+    <div className="flex flex-col min-h-screen p-4 max-w-7xl mx-auto">
+      <header className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold text-primary">Codenames Duet AI</h1>
+        <div className="flex items-center">
+          <ApiKeySettings />
+          <Button
+            onClick={() => resetGame(difficultyTokens, currentTheme)}
+            variant="outline"
+            size="icon"
+            className="ml-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </header>
+
+      {apiKeyError && (
+        <div className="w-full max-w-3xl mx-auto mb-4 p-4 bg-destructive/10 border border-destructive rounded-md text-center">
+          <div className="flex items-center justify-center mb-2">
+            <AlertTriangle className="h-5 w-5 text-destructive mr-2" />
+            <p className="text-destructive font-medium">Please set your Gemini API Key in settings to use AI features.</p>
+          </div>
+          <p className="text-sm">You can get a free API key from <a href="https://aistudio.google.com/app/apikey" className="underline" target="_blank" rel="noopener noreferrer">Google AI Studio</a>.</p>
+        </div>
+      )}
 
       <ControlsPanel
         currentTurn={gameState.currentTurn}
@@ -762,7 +860,7 @@ export default function CodenamesDuetPage() {
                 onValueChange={(value) => {
                     const numTokens = parseInt(value, 10);
                     setDifficultyTokens(numTokens);
-                    resetGame(numTokens); 
+                    resetGame(numTokens, currentTheme); 
                 }}
                 disabled={gameState.isAIClueLoading || gameState.isAIGuessing}
             >
@@ -776,9 +874,35 @@ export default function CodenamesDuetPage() {
                 </SelectContent>
             </Select>
         </div>
+
+        <div className="flex items-center gap-2">
+            <Label htmlFor="theme-select" className="text-muted-foreground">Theme:</Label>
+            <Select
+                value={currentTheme}
+                onValueChange={(value: WordTheme) => {
+                    setCurrentTheme(value);
+                    resetGame(difficultyTokens, value);
+                }}
+                disabled={gameState.isAIClueLoading || gameState.isAIGuessing}
+            >
+                <SelectTrigger id="theme-select" className="w-[140px] bg-card">
+                    <SelectValue placeholder="Select Theme" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="simpsons">The Simpsons</SelectItem>
+                    <SelectItem value="marvel">Marvel</SelectItem>
+                    <SelectItem value="harry-potter">Harry Potter</SelectItem>
+                    <SelectItem value="disney">Disney</SelectItem>
+                    <SelectItem value="video-games">Video Games</SelectItem>
+                    <SelectItem value="star-wars">Star Wars</SelectItem>
+                </SelectContent>
+            </Select>
+        </div>
+
         <Button
           variant="outline"
-          onClick={() => resetGame(difficultyTokens)}
+          onClick={() => resetGame(difficultyTokens, currentTheme)}
           className="bg-card"
           disabled={gameState.isAIClueLoading || gameState.isAIGuessing} 
         >
@@ -791,7 +915,7 @@ export default function CodenamesDuetPage() {
         isOpen={gameState.gameOver}
         message={gameState.gameMessage}
         isWin={gameState.totalGreensFound === TOTAL_UNIQUE_GREEN_AGENTS && gameState.gameOver && (gameState.gameMessage.toLowerCase().includes("win") || gameState.gameMessage.toLowerCase().includes("all agents contacted") || gameState.gameMessage.toLowerCase().includes("all agents found"))}
-        onPlayAgain={() => resetGame(difficultyTokens)}
+        onPlayAgain={() => resetGame(difficultyTokens, currentTheme)}
       />
     </div>
   );

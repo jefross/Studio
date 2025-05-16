@@ -1,4 +1,3 @@
-
 export type CardType = 'GREEN' | 'ASSASSIN' | 'BYSTANDER';
 
 export interface KeyCardEntry {
@@ -30,6 +29,7 @@ export interface Clue {
 export type PlayerTurn = 'human_clue' | 'ai_clue'; // Indicates who is giving the clue
 export type GuesserType = 'human' | 'ai';
 
+import type { WordTheme } from '@/lib/words';
 
 export interface GameState {
   gridWords: string[];
@@ -49,6 +49,7 @@ export interface GameState {
   humanClueGuessingConcluded: boolean; // True if human's guessing for current AI clue is over
   inSuddenDeath: boolean;
   suddenDeathGuesser: GuesserType | null; // Who is currently guessing in sudden death
+  theme: WordTheme; // Current theme of the word list
 }
 
 export const TOTAL_WORDS_IN_GRID = 25;
